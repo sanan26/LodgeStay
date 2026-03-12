@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using LodgeStay.Data;
 
 namespace LodgeStay;
 
@@ -16,8 +17,16 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
+		var dbPath = Path.Combine(FileSystem.AppDataDirectory, "lodgestay.db");
+		builder.Services.AddSingleton<DatabaseContext>(s =>
+		{
+			var context = new DatabaseContext(dbPath);
+			context.InitializeAsync().Wait();
+			return context;
+		});
+
 #if DEBUG
-		builder.Services.AddBlazorWebViewDeveloperTools();
+        builder.Services.AddBlazorWebViewDeveloperTools();
 		builder.Logging.AddDebug();
 #endif
 
