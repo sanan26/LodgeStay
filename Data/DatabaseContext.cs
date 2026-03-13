@@ -72,5 +72,12 @@ namespace LodgeStay.Data
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
         } 
+
+        public async Task<User?> GetUserByIdAsync(int userId)
+        {
+            return await _database.Table<User>()
+                .Where(u => u.User_ID == userId)
+                .FirstOrDefaultAsync();
+        }
     }
 }

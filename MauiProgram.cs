@@ -27,6 +27,7 @@ public static class MauiProgram
 		});
 
 		builder.Services.AddSingleton<AuthService>();
+		builder.Services.AddSingleton<OtpService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
