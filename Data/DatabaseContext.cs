@@ -20,5 +20,17 @@ namespace LodgeStay.Data
             await _database.CreateTableAsync<Room>();
             await _database.CreateTableAsync<Reservation>();
         }
+
+        public async Task<User?> GetUserByEmailAsync(string email)
+        {
+            return await _database.Table<User>()
+                .Where(u => u.Email == email)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<int> InsertUserAsync(User user)
+        {
+            return await _database.InsertAsync(user);
+        }
     }
 }

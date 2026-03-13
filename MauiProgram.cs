@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 using LodgeStay.Data;
+using LodgeStay.Services;
 
 namespace LodgeStay;
 
@@ -24,6 +25,8 @@ public static class MauiProgram
 			context.InitializeAsync().Wait();
 			return context;
 		});
+
+		builder.Services.AddSingleton<AuthService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
