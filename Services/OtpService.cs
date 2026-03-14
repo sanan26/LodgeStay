@@ -43,5 +43,4 @@ namespace LodgeStay.Services
             return false; // OTP is invalid or expired
         }
     }
-
 }
