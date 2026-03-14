@@ -1,0 +1,78 @@
+﻿@page "/staff-dashboard"
+@inject NavigationManager Navigation
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h2>👷 Staff Dashboard</h2>
+        <p class="welcome">Welcome back! Here's your overview.</p>
+    </div>
+
+    <div class="cards-grid">
+        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/room-finder")'>
+            <div class="card-icon">🔍</div>
+            <h3>Room Finder</h3>
+            <p>Search available rooms</p>
+        </div>
+        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
+            <div class="card-icon">📋</div>
+            <h3>Reservations</h3>
+            <p>View and manage bookings</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .dashboard-container {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+    }
+
+    h2 {
+        color: #2e7d32;
+    }
+
+    .welcome {
+        color: #888;
+        font-size: 0.95rem;
+    }
+
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .dash-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        text-align: center;
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+
+        .dash-card:hover {
+            transform: translateY(-4px);
+        }
+
+    .card-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    h3 {
+        color: #2e7d32;
+        margin-bottom: 0.5rem;
+    }
+
+    p {
+        color: #888;
+        font-size: 0.9rem;
+    }
+</style>
