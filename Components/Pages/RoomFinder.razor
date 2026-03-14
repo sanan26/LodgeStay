@@ -1,0 +1,215 @@
+﻿@page "/room-finder"
+@using LodgeStay.Data
+@using LodgeStay.Models
+@inject DatabaseContext DbContext
+@inject NavigationManager Navigation
+
+<div class="finder-container">
+    <h2>🔍 Smart Room Finder</h2>
+
+    <div class="search-bar">
+        <div class="filter-group">
+            <label>Check-in Date</label>
+            <input type="date" @bind="checkIn" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="filter-group">
+            <label>Check-out Date</label>
+            <input type="date" @bind="checkOut" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="filter-group">
+            <label>Guests</label>
+            <input type="number" @bind="guests" min="1" max="10" />
+        </div>
+        <div class="filter-group">
+            <label>Room Type</label>
+            <select @bind="roomType">
+                <option value="">All Types</option>
+                <option value="Single">Single</option>
+                <option value="Double">Double</option>
+                <option value="Suite">Suite</option>
+                <option value="Family">Family</option>
+            </select>
+        </div>
+        <button class="btn-search" @onclick="SearchRooms">Search</button>
+    </div>
+
+    @if (isLoading)
+    {
+        <p class="loading">⏳ Searching rooms...</p>
+    }
+    else if (searched && rooms.Count == 0)
+    {
+        <p class="no-results">😕 No rooms available for this period. Try different dates.</p>
+    }
+    else if (rooms.Count > 0)
+    {
+        <div class="rooms-grid">
+            @foreach (var room in rooms)
+            {
+                <div class="room-card @GetStatusClass(room.Status)">
+                    <div class="room-header">
+                        <span class="room-number">Room @room.RoomNo</span>
+                        <span class="status-badge">@room.Status</span>
+                    </div>
+                    <div class="room-info">
+                        <p>🛏️ @room.Room_Type</p>
+                        <p>👥 Capacity: @room.Capacity</p>
+                        <p>💰 Rs. @room.Price / night</p>
+                        @if (room.IsEcoCertified)
+                        {
+                            <p>🌿 Eco Certified</p>
+                        }
+                    </div>
+                    <button class="btn-book"
+                            disabled="@(room.Status != "Available")"
+                            @onclick="() => BookRoom(room)">
+                        @(room.Status == "Available" ? "Book Now" : room.Status)
+                    </button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private DateTime checkIn = DateTime.Now;
+    private DateTime checkOut = DateTime.Now.AddDays(1);
+    private int guests = 1;
+    private string roomType = "";
+    private List<Room> rooms = new();
+    private bool isLoading = false;
+    private bool searched = false;
+
+    private async Task SearchRooms()
+    {
+        if (checkOut <= checkIn)
+        {
+            return;
+        }
+
+        isLoading = true;
+        searched = true;
+
+        try
+        {
+            var allRooms = await DbContext.GetRoomsAsync();
+
+            rooms = allRooms.Where(r =>
+                r.Capacity >= guests &&
+                (string.IsNullOrEmpty(roomType) || r.Room_Type == roomType)
+            ).ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "Available" => "status-available",
+        "Reserved" => "status-reserved",
+        "Occupied" => "status-occupied",
+        _ => ""
+    };
+
+   
+    private void BookRoom(Room room)
+    {
+        Navigation.NavigateTo($"/new-booking/{room.Room_ID}");
+    }
+}
+
+<style>
+    .finder-container {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+    h2 { color: #2e7d32; margin-bottom: 1.5rem; }
+    .search-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        background: #f9f9f9;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+        align-items: flex-end;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 150px;
+    }
+    label { font-size: 0.85rem; font-weight: 600; color: #555; }
+    input, select {
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.95rem;
+    }
+    .btn-search {
+        padding: 10px 24px;
+        background: #2e7d32;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        height: 42px;
+    }
+    .btn-search:hover { background: #1b5e20; }
+    .rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+    .room-card {
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border-left: 5px solid #ccc;
+        background: white;
+    }
+    .status-available { border-left-color: #2e7d32; }
+    .status-reserved { border-left-color: #f9a825; }
+    .status-occupied { border-left-color: #c62828; }
+    .room-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    .room-number { font-weight: 700; font-size: 1.1rem; }
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    .status-available .status-badge { background: #e8f5e9; color: #2e7d32; }
+    .status-reserved .status-badge { background: #fff8e1; color: #f9a825; }
+    .status-occupied .status-badge { background: #ffebee; color: #c62828; }
+    .room-info p { margin: 0.3rem 0; color: #555; font-size: 0.95rem; }
+    .btn-book {
+        width: 100%;
+        margin-top: 1rem;
+        padding: 10px;
+        background: #2e7d32;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+    .btn-book:disabled { background: #ccc; cursor: not-allowed; }
+    .btn-book:hover:not(:disabled) { background: #1b5e20; }
+    .loading { color: #888; font-size: 1rem; text-align: center; padding: 2rem; }
+    .no-results { color: #c62828; text-align: center; padding: 2rem; font-size: 1rem; }
+</style>
