@@ -79,5 +79,24 @@ namespace LodgeStay.Data
                 .Where(u => u.User_ID == userId)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<List<Room>> GetAllRoomsAsync()
+        {
+            return await _database.Table<Room>()
+                .ToListAsync();
+        }
+
+        public async Task<Room?> GetRoomByIdAsync(int roomid)
+        {
+            return await _database.Table<Room>()
+                .Where(r => r.Room_ID == roomid)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Reservation>> GetOverlappingReservationsAsync(DateTime checkin, DateTime checkout){
+            return await _database.Table<Reservation>()
+                .Where(r => r.CheckIn < checkout && r.CheckOut > checkin && r.Status == "Confirmed")
+                .ToListAsync();
+        }  
     }
 }
