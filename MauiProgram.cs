@@ -30,6 +30,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<OtpService>();
 		builder.Services.AddSingleton<SessionService>();
 		builder.Services.AddSingleton<RoomService>();
+		builder.Services.AddSingleton<ReservationService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

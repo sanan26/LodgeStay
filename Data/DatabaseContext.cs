@@ -98,5 +98,41 @@ namespace LodgeStay.Data
                 .Where(r => r.CheckIn < checkout && r.CheckOut > checkin && r.Status == "Confirmed")
                 .ToListAsync();
         }  
+
+        public async Task<int> SaveReservationAsync(Reservation reservation)
+        {
+            if (reservation.Reservation_ID != 0)
+            {
+                return await _database.UpdateAsync(reservation);
+            }
+            else
+            {
+                return await _database.InsertAsync(reservation);
+            }
+        }
+
+        public async Task<List<Reservation>> GetAllReservationsAsync()
+        {
+            return await _database.Table<Reservation>().ToListAsync();
+        }
+
+        public async Task<Reservation?> GetReservationByIdAsync(int id)
+        {
+            return await _database.Table<Reservation>()
+                .Where(r => r.Reservation_ID == id)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<Reservation>> GetReservationsByGuestEmailAsync(string email)
+        {
+            return await _database.Table<Reservation>()
+                .Where(r => r.GuestEmail == email)
+                .ToListAsync();
+        }
+
+        public async Task<int> SaveRoomAsync(Room room)
+        {
+            return await _database.UpdateAsync(room);
+        }
     }
 }
