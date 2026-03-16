@@ -35,6 +35,12 @@ namespace LodgeStay.Services
             }
         }
 
+        public async Task<bool> IsRoomAvailableAsync(int roomid, DateTime checkin, DateTime checkout)
+        {
+            var overlapping = await _database.GetOverlappingReservationsAsync(checkin, checkout);
+            return !overlapping.Any(r => r.Room_ID == roomid);
+        }
+
         public async Task<List<Room>> GetAllRoomsAsync()
         {
             return await _database.GetAllRoomsAsync();
