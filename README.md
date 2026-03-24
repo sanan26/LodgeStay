@@ -28,5 +28,5 @@ Make sure you have the following installed:
 
 ### Clone the Repository
 ```bash
-git clone https://github.com/yourusername/LodgeStay.git
+git clone https://github.com/sanan26/LodgeStay.git
 cd LodgeStay
