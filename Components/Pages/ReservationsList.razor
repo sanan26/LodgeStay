@@ -96,7 +96,7 @@
         isLoading = true;
         try
         {
-            allReservations = await DbContext.GetReservationsAsync();
+            allReservations = await DbContext.GetAllReservationsAsync();
         }
         catch (Exception ex)
         {
@@ -123,7 +123,7 @@
         try
         {
             reservation.Status = "Cancelled";
-            await DbContext.UpdateReservationAsync(reservation);
+            await DbContext.SaveReservationAsync(reservation);
             await LoadReservations();
         }
         catch (Exception ex)
@@ -136,7 +136,7 @@
     {
         try
         {
-            var reservations = await DbContext.GetReservationsAsync();
+            var reservations = await DbContext.GetAllReservationsAsync();
             var confirmed = reservations.Where(r => r.Status == "Confirmed").ToList();
 
             if (confirmed.Count == 0)

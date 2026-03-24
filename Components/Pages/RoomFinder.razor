@@ -92,7 +92,7 @@
 
         try
         {
-            var allRooms = await DbContext.GetRoomsAsync();
+            var allRooms = await DbContext.GetAllRoomsAsync();
 
             rooms = allRooms.Where(r =>
                 r.Capacity >= guests &&

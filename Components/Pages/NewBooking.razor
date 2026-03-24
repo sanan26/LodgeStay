@@ -82,7 +82,7 @@
     {
         try
         {
-            var rooms = await DbContext.GetRoomsAsync();
+            var rooms = await DbContext.GetAllRoomsAsync();
             selectedRoom = rooms.FirstOrDefault(r => r.Room_ID == RoomId);
         }
         catch (Exception ex)
@@ -112,7 +112,7 @@
 
         try
         {
-            var existing = await DbContext.GetReservationsAsync();
+            var existing = await DbContext.GetAllReservationsAsync();
             bool conflict = existing.Any(r =>
                 r.Room_ID == RoomId &&
                 r.Status == "Confirmed" &&

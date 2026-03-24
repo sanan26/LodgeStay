@@ -67,7 +67,7 @@
     {
         try
         {
-            var all = await DbContext.GetReservationsAsync();
+            var all = await DbContext.GetAllReservationsAsync();
             reservation = all.FirstOrDefault(r => r.BookingReference == BookingReference);
         }
         catch (Exception ex)

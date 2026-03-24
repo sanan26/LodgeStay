@@ -22,7 +22,9 @@ public static class MauiProgram
 		builder.Services.AddSingleton<DatabaseContext>(s =>
 		{
 			var context = new DatabaseContext(dbPath);
-			context.InitializeAsync().Wait();
+			Task.Run(async () => await context.InitializeAsync())
+				.GetAwaiter()
+				.GetResult(); // Ensure the database is initialized before returning the context
 			return context;
 		});
 
@@ -31,6 +33,8 @@ public static class MauiProgram
 		builder.Services.AddSingleton<SessionService>();
 		builder.Services.AddSingleton<RoomService>();
 		builder.Services.AddSingleton<ReservationService>();
+		builder.Services.AddSingleton<ConnectivityService>();
+		builder.Services.Add
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
