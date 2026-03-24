@@ -1,0 +1,173 @@
+@page "/register"
+@using LodgeStay.Models
+@using LodgeStay.Data
+@inject DatabaseContext DbContext
+@inject NavigationManager Navigation
+
+<div class="login-container">
+    <div class="login-card">
+        <div class="logo">🏨</div>
+        <h2>Create Account</h2>
+        <p class="subtitle">Join LodgeStay</p>
+
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" @bind="name" placeholder="Enter your name" />
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" @bind="email" placeholder="Enter your email" />
+        </div>
+        <div class="form-group">
+            <label>Phone</label>
+            <input type="text" @bind="phone" placeholder="Enter your phone" />
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" @bind="password" placeholder="Min 8 characters" />
+        </div>
+        <div class="form-group">
+            <label>Role</label>
+            <select @bind="role">
+                <option value="Staff">Staff</option>
+                <option value="Manager">Manager</option>
+                <option value="Owner">Owner</option>
+            </select>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+                <div class="error-box">⚠️ @errorMessage</div>
+        }
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+                <div class="success-box">✅ @successMessage</div>
+        }
+
+        <button class="btn-login" @onclick="HandleRegister">Register</button>
+        <p class="signup-link">Already have an account? <a href="/login">Login</a></p>
+    </div>
+</div>
+
+@code {
+    private string name = "";
+    private string email = "";
+    private string phone = "";
+    private string password = "";
+    private string role = "Staff";
+    private string errorMessage = "";
+    private string successMessage = "";
+
+    private async Task HandleRegister()
+    {
+        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        {
+            errorMessage = "Please fill in all required fields.";
+            return;
+        }
+        if (password.Length < 8)
+        {
+            errorMessage = "Password must be at least 8 characters.";
+            return;
+        }
+
+        try
+        {
+            var users = await DbContext.GetUsersAsync();
+            if (users.Any(u => u.Email == email))
+            {
+                errorMessage = "An account with this email already exists.";
+                return;
+            }
+
+            var user = new User
+                {
+                    Name = name,
+                    Email = email,
+                    PhoneNo = phone,
+                    PasswordHash = HashPassword(password),
+                    Role = role,
+                    IsVerified = true
+                };
+
+            await DbContext.SaveUserAsync(user);
+            successMessage = "Account created! Redirecting to login...";
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+    }
+
+    private string HashPassword(string password)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(
+            System.Text.Encoding.UTF8.GetBytes(password));
+        return Convert.ToBase64String(bytes);
+    }
+}
+
+<style>
+    .login-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    }
+    .login-card {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        width: 100%;
+        max-width: 400px;
+        text-align: center;
+    }
+    .logo { font-size: 3rem; margin-bottom: 0.5rem; }
+    h2 { color: #2e7d32; margin-bottom: 0.25rem; }
+    .subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
+    .form-group { text-align: left; margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; font-weight: 600; }
+    input, select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-sizing: border-box;
+    }
+    input:focus, select:focus { outline: none; border-color: #2e7d32; }
+    .btn-login {
+        width: 100%;
+        padding: 12px;
+        background-color: #2e7d32;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-top: 0.5rem;
+    }
+    .btn-login:hover { background-color: #1b5e20; }
+    .error-box {
+        background: #ffebee;
+        color: #c62828;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    .success-box {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    .signup-link { margin-top: 1.5rem; font-size: 0.9rem; color: #555; }
+    .signup-link a { color: #2e7d32; font-weight: 600; text-decoration: none; }
+</style>
