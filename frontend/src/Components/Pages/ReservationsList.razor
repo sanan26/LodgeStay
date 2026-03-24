@@ -1,0 +1,361 @@
+﻿@page "/reservations"
+@using LodgeStay.Models
+@using LodgeStay.Services
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ReservationService ReservationService
+
+<div class="reservations-container">
+    <div class="page-header">
+        <div class="header-left">
+            <button class="btn-back" @onclick="GoBack">← Back</button>
+            <h2>📋 Reservations</h2>
+        </div>
+        <div class="header-actions">
+            <button class="btn-export" @onclick="ExportCalendar">📅 Export .ics</button>
+            <button class="btn-new" @onclick="GoToNewBooking">+ New Booking</button>
+        </div>
+    </div>
+
+    <div class="filters">
+        <input type="text" @bind="searchQuery" @bind:event="oninput" placeholder="🔍 Search by guest name..." />
+        <select @bind="statusFilter">
+            <option value="">All Status</option>
+            <option value="Confirmed">Confirmed</option>
+            <option value="Cancelled">Cancelled</option>
+        </select>
+    </div>
+
+    @if (isLoading)
+    {
+        <p class="loading">Loading reservations...</p>
+    }
+    else if (filteredReservations.Count == 0)
+    {
+        <p class="no-results">No reservations found.</p>
+    }
+    else
+    {
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Booking ID</th>
+                        <th>Guest Name</th>
+                        <th>Room</th>
+                        <th>Check-in</th>
+                        <th>Check-out</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in filteredReservations)
+                    {
+                        <tr>
+                            <td>@r.BookingReference</td>
+                            <td>@r.GuestName</td>
+                            <td>Room @r.Room_ID</td>
+                            <td>@r.CheckIn.ToString("dd MMM yyyy")</td>
+                            <td>@r.CheckOut.ToString("dd MMM yyyy")</td>
+                            <td>Rs. @r.TotalPrice</td>
+                            <td><span class="@GetStatusClass(r.Status)">@r.Status</span></td>
+                            <td>
+                                <button class="btn-view" @onclick="() => ViewConfirmation(r)">View</button>
+                                @if (r.Status == "Confirmed")
+                                {
+                                    <button class="btn-cancel-res" @onclick="() => CancelReservation(r)">Cancel</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+@code {
+    private string searchQuery = "";
+    private string statusFilter = "";
+    private List<Reservation> allReservations = new();
+    private bool isLoading = true;
+
+    private List<Reservation> filteredReservations => allReservations
+        .Where(r =>
+            (string.IsNullOrEmpty(searchQuery) || r.GuestName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrEmpty(statusFilter) || r.Status == statusFilter)
+        ).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReservations();
+    }
+
+    private async Task LoadReservations()
+    {
+        isLoading = true;
+        allReservations = await ReservationService.GetReservationsAsync();
+        isLoading = false;
+    }
+
+    private async Task GoBack()
+    {
+        await JSRuntime.InvokeVoidAsync("history.back");
+    }
+
+    private void GoToNewBooking()
+    {
+        Navigation.NavigateTo("/room-finder");
+    }
+
+    private void ViewConfirmation(Reservation reservation)
+    {
+        // Pass all the booking data as query parameters
+        Navigation.NavigateTo($"/booking-confirmation/{reservation.BookingReference}" +
+            $"?guest={Uri.EscapeDataString(reservation.GuestName)}" +
+            $"&room={reservation.Room_ID}" +
+            $"&checkin={reservation.CheckIn:yyyy-MM-dd}" +
+            $"&checkout={reservation.CheckOut:yyyy-MM-dd}" +
+            $"&total={reservation.TotalPrice}");
+    }
+
+    private async Task CancelReservation(Reservation reservation)
+    {
+        await ReservationService.CancelReservationAsync(reservation.BookingReference);
+        await LoadReservations(); // Refresh the list
+    }
+
+    private async Task ExportCalendar()
+    {
+        try
+        {
+            var confirmed = allReservations.Where(r => r.Status == "Confirmed").ToList();
+            if (confirmed.Count == 0)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "No confirmed bookings to export.");
+                return;
+            }
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("BEGIN:VCALENDAR");
+            sb.AppendLine("VERSION:2.0");
+            sb.AppendLine("PRODID:-//LodgeStay//EN");
+
+            foreach (var r in confirmed)
+            {
+                sb.AppendLine("BEGIN:VEVENT");
+                sb.AppendLine($"UID:{r.BookingReference}@lodgestay.com");
+                sb.AppendLine($"DTSTAMP:{DateTime.Now:yyyyMMddTHHmmssZ}");
+                sb.AppendLine($"DTSTART:{r.CheckIn:yyyyMMdd}");
+                sb.AppendLine($"DTEND:{r.CheckOut:yyyyMMdd}");
+                sb.AppendLine($"SUMMARY:Booking: {r.GuestName}");
+                sb.AppendLine($"DESCRIPTION:Room {r.Room_ID} | Guests: {r.NumberOfGuests} | Total: Rs.{r.TotalPrice}");
+                sb.AppendLine("END:VEVENT");
+            }
+
+            sb.AppendLine("END:VCALENDAR");
+
+            var calendarData = sb.ToString();
+
+            // Create a data URI and trigger download
+            var encodedData = Uri.EscapeDataString(calendarData);
+            await JSRuntime.InvokeVoidAsync("eval", $@"
+            const link = document.createElement('a');
+            const content = decodeURIComponent('{encodedData}');
+            const blob = new Blob([content], {{ type: 'text/calendar' }});
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = 'lodgestay_bookings.ics';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        ");
+        }
+        catch (Exception ex)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Error exporting calendar: {ex.Message}");
+        }
+    }
+
+    private string GetStatusClass(string status) => status switch
+    {
+        "Confirmed" => "badge-confirmed",
+        "Cancelled" => "badge-cancelled",
+        _ => ""
+    };
+}
+
+<style>
+    /* Your existing styles remain the same */
+    .reservations-container {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+        .header-left h2 {
+            margin-bottom: 0;
+        }
+
+    h2 {
+        color: #2e7d32;
+    }
+
+    .btn-back {
+        padding: 8px 16px;
+        background: #f5f5f5;
+        color: #555;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
+        .btn-back:hover {
+            background: #e0e0e0;
+        }
+
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .btn-export {
+        padding: 10px 20px;
+        background: #1565c0;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
+        .btn-export:hover {
+            background: #0d47a1;
+        }
+
+    .btn-new {
+        padding: 10px 20px;
+        background: #2e7d32;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
+        .btn-new:hover {
+            background: #1b5e20;
+        }
+
+    .filters {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+        .filters input, .filters select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            flex: 1;
+        }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    th {
+        background: #2e7d32;
+        color: white;
+        padding: 12px 16px;
+        text-align: left;
+        font-size: 0.9rem;
+    }
+
+    td {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.9rem;
+        color: #444;
+    }
+
+    tr:hover {
+        background: #f9f9f9;
+    }
+
+    .badge-confirmed {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .badge-cancelled {
+        background: #ffebee;
+        color: #c62828;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .btn-view {
+        padding: 5px 12px;
+        background: #e3f2fd;
+        color: #1565c0;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-right: 5px;
+        font-size: 0.85rem;
+    }
+
+    .btn-cancel-res {
+        padding: 5px 12px;
+        background: #ffebee;
+        color: #c62828;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+    }
+
+    .no-results, .loading {
+        color: #888;
+        text-align: center;
+        padding: 2rem;
+    }
+
+    .loading {
+        color: #2e7d32;
+    }
+</style>
