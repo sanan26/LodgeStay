@@ -36,6 +36,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ConnectivityService>();
 		builder.Services.AddSingleton<CalendarExportService>();
 		builder.Services.AddSingleton<ShareService>();
+		builder.Services.AddSingleton<GuestService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
