@@ -130,14 +130,14 @@
         if (guest != null)
         {
             editGuest = new GuestProfile
-                {
-                    Id = guest.Id,
-                    PreferredRoomType = guest.PreferredRoomType,
-                    BedPreference = guest.BedPreference,
-                    FloorPreference = guest.FloorPreference,
-                    DietaryNotes = guest.DietaryNotes,
-                    AmenityNotes = guest.AmenityNotes
-                };
+            {
+                Id = guest.Id,
+                PreferredRoomType = guest.PreferredRoomType,
+                PreferredBedType = guest.BedPreference,
+                PreferredFloor = guest.FloorPreference,
+                DietaryPreferences = guest.DietaryNotes,
+                AmenityPreferences = guest.AmenityNotes
+            };
         }
 
         var allReservations = await ReservationService.GetReservationsAsync();
@@ -159,10 +159,10 @@
         if (guest != null && editGuest != null)
         {
             guest.PreferredRoomType = editGuest.PreferredRoomType;
-            guest.BedPreference = editGuest.BedPreference;
-            guest.FloorPreference = editGuest.FloorPreference;
-            guest.DietaryNotes = editGuest.DietaryNotes;
-            guest.AmenityNotes = editGuest.AmenityNotes;
+            guest.PreferredBedType = editGuest.BedPreference;
+            guest.PreferredFloor = editGuest.FloorPreference;
+            guest.DietaryPreferences = editGuest.DietaryNotes;
+            guest.AmenityPreferences = editGuest.AmenityNotes;
 
             await GuestService.UpdateGuestAsync(guest);
             isEditing = false;

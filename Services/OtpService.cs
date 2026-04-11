@@ -36,6 +36,10 @@ namespace LodgeStay.Services
                 otp.IsUsed = true;
                 await _database.SaveOtpAsync(otp);
                 var user = await _database.GetUserByIdAsync(userId);
+                if (user == null)
+                {
+                    return false; // User not found
+                }
                 user.IsVerified = true;
                 await _database.SaveUserAsync(user);
                 return true; // OTP is valid

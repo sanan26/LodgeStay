@@ -143,6 +143,13 @@ namespace LodgeStay.Data
                 .FirstOrDefaultAsync();
         }
 
+        public async Task<GuestProfile?> GetGuestByIdAsync(int id)
+        {
+            return await _database.Table<GuestProfile>()
+                .Where(u => u.Id == id)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<int> InsertGuestAsync(GuestProfile guest)
         {
             return await _database.InsertAsync(guest);

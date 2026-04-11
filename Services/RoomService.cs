@@ -46,6 +46,11 @@ namespace LodgeStay.Services
             return await _database.GetAllRoomsAsync();
         }
 
+        public async Task<List<Room>> GetRoomsAsync()
+        {
+            return await _database.GetAllRoomsAsync();
+        }
+
         public async Task<Room?> GetRoomByIdAsync(int roomid)
         {
             return await _database.GetRoomByIdAsync(roomid);

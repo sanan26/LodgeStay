@@ -2,6 +2,7 @@
 using LodgeStay.Models;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LodgeStay.Services
 {
@@ -85,6 +86,22 @@ namespace LodgeStay.Services
         {
             return await _database.GetReservationsByGuestEmailAsync(email);
 
+        }
+
+        public async Task<List<Reservation>> GetReservationsAsync()
+        {
+            return await GetAllReservationsAsync();
+        }
+
+        public async Task<bool> AddReservationAsync(Reservation reservation)
+        {
+            return await CreateReservationAsync(reservation);
+        }
+
+        public async Task<List<Reservation>> GetReservationByReferenceAsync(string reference)
+        {
+            var all = await _database.GetAllReservationsAsync();
+            return all.Where(r => r.BookingReference == reference).ToList();
         }
     }
 }

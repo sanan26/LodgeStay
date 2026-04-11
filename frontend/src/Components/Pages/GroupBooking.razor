@@ -104,10 +104,10 @@
     private string errorMessage = "";
 
     private int totalNights => (checkOut - checkIn).Days;
-    private int subtotal => selectedRooms.Sum(r => r.Price * totalNights);
+    private double subtotal => selectedRooms.Sum(r => r.Price * totalNights);
     private int discountPercent => selectedRooms.Count >= 5 ? 20 : selectedRooms.Count >= 3 ? 15 : selectedRooms.Count >= 2 ? 10 : 0;
-    private int discountAmount => subtotal * discountPercent / 100;
-    private int totalPayable => subtotal - discountAmount;
+    private double discountAmount => subtotal * discountPercent / 100;
+    private double totalPayable => subtotal - discountAmount;
 
     protected override async Task OnInitializedAsync()
     {

@@ -98,7 +98,7 @@
         else
         {
             // Existing booking - get from service
-            reservation = await ReservationService.GetReservationByReferenceAsync(BookingReference);
+            List<Reservation> reservations = await ReservationService.GetReservationByReferenceAsync(BookingReference);
         }
 
         isLoading = false;

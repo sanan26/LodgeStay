@@ -34,6 +34,16 @@ namespace LodgeStay.Services
             return await _database.GetGuestByEmailAsync(email);
         }
 
+        public async Task<GuestProfile?> GetGuestByIdAsync(int id)
+        {
+            return await _database.GetGuestByIdAsync(id);
+        }
+
+        public async Task<List<GuestProfile>> GetAllGuestsAsync()
+        {
+            return await _database.SearchGuestsAsync("");
+        }
+
         public async Task<int> UpdateGuestAsync(GuestProfile guest)
         {
             return await _database.UpdateGuestAsync(guest);
