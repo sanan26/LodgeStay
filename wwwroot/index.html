@@ -3,19 +3,31 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#2e7d32" />
+    <meta name="description" content="LodgeStay - Smart Lodge Management System" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="LodgeStay" />
+
     <title>LodgeStay</title>
     <base href="/" />
+
+    <!-- Styles -->
     <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="app.css" />
     <link rel="stylesheet" href="LodgeStay.styles.css" />
-    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="css/responsive.css" />
+
+    <!-- PWA Manifest & Icons -->
     <link rel="manifest" href="manifest.json" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+    <link rel="icon" href="data:," />
 </head>
 
 <body>
-
     <div class="status-bar-safe-area"></div>
-
     <div id="app">Loading...</div>
 
     <div id="blazor-error-ui" data-nosnippet>
@@ -26,6 +38,32 @@
 
     <script src="_framework/blazor.webview.js" autostart="false"></script>
 
-</body>
+    <!-- Service Worker Registration for PWA -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register('/service-worker.js').then(function (registration) {
+                    console.log('Service Worker registered successfully with scope:', registration.scope);
+                }).catch(function (error) {
+                    console.log('Service Worker registration failed:', error);
+                });
+            });
+        }
 
+        // PWA Install Prompt
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+
+            // Optional: Show install banner
+            console.log('PWA install prompt available');
+        });
+
+        // Check if app is running in standalone mode (installed PWA)
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('App is running as installed PWA');
+        }
+    </script>
+</body>
 </html>
