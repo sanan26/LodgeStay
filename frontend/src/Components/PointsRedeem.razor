@@ -1,0 +1,48 @@
+﻿@using LodgeStay.Services
+@inject LoyaltyService LoyaltyService
+@inject IJSRuntime JSRuntime
+
+<div class="redeem-card">
+    <h4>🎁 Redeem Points</h4>
+    <p>Current Balance: <strong>@CurrentPoints</strong> points</p>
+
+    <div class="redeem-slider">
+        <input type="range"
+               min="0"
+               max="@MaxRedeemable"
+               step="100"
+               @bind="redeemPoints"
+               @bind:event="oninput" />
+        <div class="redeem-values">
+            <span>0</span>
+            <span>@MaxRedeemable</span>
+        </div>
+    </div>
+
+    <div class="redeem-summary">
+        <span>Redeeming: <strong>@redeemPoints</strong> points</span>
+        <span>Discount: <strong>Rs. @DiscountAmount</strong></span>
+    </div>
+
+    <button class="btn-redeem"
+            @onclick="Redeem"
+            disabled="@(!CanRedeem)">
+        Apply Discount
+    </button>
+</div>
+
+@code {
+    [Parameter] public int CurrentPoints { get; set; }
+    [Parameter] public EventCallback<int> OnRedeemed { get; set; }
+
+    private int redeemPoints = 0;
+    private int MaxRedeemable => (CurrentPoints / 100) * 100;
+    private int DiscountAmount => redeemPoints / 100;
+    private bool CanRedeem => redeemPoints >= 100;
+
+    private async Task Redeem()
+    {
+        await OnRedeemed.InvokeAsync(redeemPoints);
+        await JSRuntime.InvokeVoidAsync("alert", $"Rs. {DiscountAmount} discount applied!");
+    }
+}

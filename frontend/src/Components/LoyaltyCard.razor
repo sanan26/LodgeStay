@@ -1,0 +1,79 @@
+﻿@using LodgeStay.Services
+@inject LoyaltyService LoyaltyService
+
+<div class="loyalty-card @TierClass">
+    <div class="loyalty-header">
+        <span class="loyalty-icon">⭐</span>
+        <span class="loyalty-tier">@Tier</span>
+    </div>
+    <div class="loyalty-points">
+        <span class="points-value">@Points</span>
+        <span class="points-label">points</span>
+    </div>
+    <div class="loyalty-progress">
+        <div class="progress-bar" style="width: @ProgressPercent%"></div>
+    </div>
+    <div class="loyalty-next">
+        @NextTierText
+    </div>
+</div>
+
+@code {
+    [Parameter] public int Points { get; set; }
+
+    private string Tier => Points >= 5000 ? "Gold" : Points >= 1000 ? "Silver" : "Bronze";
+    private string TierClass => Tier.ToLower();
+
+    private int ProgressPercent
+    {
+        get
+        {
+            if (Points >= 5000) return 100;
+            if (Points >= 1000) return (Points - 1000) * 100 / 4000;
+            return Points * 100 / 1000;
+        }
+    }
+
+    private string NextTierText
+    {
+        get
+        {
+            if (Points >= 5000) return "🎉 Max Tier Reached!";
+            if (Points >= 1000) return $"{5000 - Points} points to Gold";
+            return $"{1000 - Points} points to Silver";
+        }
+    }
+}
+
+<style>
+    .loyalty-card {
+        background: linear-gradient(135deg, #fff9e6, #fff3cd);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+        .loyalty-card.gold {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+        }
+
+        .loyalty-card.silver {
+            background: linear-gradient(135deg, #e0e0e0, #f5f5f5);
+        }
+
+        .loyalty-card.bronze {
+            background: linear-gradient(135deg, #cd7f32, #e8a87c);
+        }
+
+    .loyalty-points .points-value {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: #2e7d32;
+        border-radius: 4px;
+        margin-top: 8px;
+    }
+</style>
