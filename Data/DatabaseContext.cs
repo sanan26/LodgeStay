@@ -21,6 +21,7 @@ namespace LodgeStay.Data
             await _database.CreateTableAsync<Room>();
             await _database.CreateTableAsync<Reservation>();
             await _database.CreateTableAsync<OtpVerification>();
+            await _database.CreateTableAsync<GuestProfile>();
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -134,5 +135,29 @@ namespace LodgeStay.Data
         {
             return await _database.UpdateAsync(room);
         }
+
+        public async Task<GuestProfile?> GetGuestByEmailAsync(string email)
+        {
+            return await _database.Table<GuestProfile>()
+                .Where(u => u.Email == email)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<int> InsertGuestAsync(GuestProfile guest)
+        {
+            return await _database.InsertAsync(guest);
+        }
+
+        public async Task<int> UpdateGuestAsync(GuestProfile guest)
+        {
+            return await _database.UpdateAsync(guest);
+        }
+        public async Task<List<GuestProfile>> SearchGuestsAsync(string query)
+        {
+            var all = await _database.Table<GuestProfile>().ToListAsync();
+            return all.Where(g => g.Name.Contains(query) || g.Email.Contains(query))
+                      .ToList();
+        }
+
     }
 }
