@@ -1,7 +1,9 @@
-﻿@page "/room-finder"
+@page "/room-finder"
 @using LodgeStay.Models
+@using LodgeStay.Services
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject GuestService GuestService
 
 <div class="finder-container">
     <div class="page-header">
@@ -9,10 +11,29 @@
         <h2>🔍 Smart Room Finder</h2>
     </div>
 
+    <!-- Guest Selection for Returning Guests -->
+    <div class="guest-selector">
+        <label>👤 Returning Guest? Search by email:</label>
+        <div class="guest-search">
+            <input type="text"
+                   @bind="guestSearchQuery"
+                   @bind:event="oninput"
+                   placeholder="Enter guest email..." />
+            <button class="btn-search-guest" @onclick="LoadGuestByEmail">Load Guest</button>
+        </div>
+        @if (selectedGuest != null)
+        {
+            <div class="selected-guest">
+                <span>✅ Guest loaded: <strong>@selectedGuest.Name</strong></span>
+                <span class="pref-hint">⭐ Preferred room: @(string.IsNullOrEmpty(selectedGuest.PreferredRoomType) ? "Any" : selectedGuest.PreferredRoomType)</span>
+            </div>
+        }
+    </div>
+
     <div class="search-bar">
         <div class="filter-group">
             <label>Check-in Date</label>
-            <input type="date" @bind="checkIn" @bind:format="yyyy-MM-dd" />
+            <input type="date" @bind="checkIn" @bind:format="yyyy-MM-dd" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
         </div>
         <div class="filter-group">
             <label>Check-out Date</label>
@@ -44,9 +65,19 @@
         <div class="rooms-grid">
             @foreach (var room in rooms)
             {
-                <div class="room-card @GetStatusClass(room.Status)">
+                bool isPreferred = selectedGuest != null &&
+                !string.IsNullOrEmpty(selectedGuest.PreferredRoomType) &&
+                selectedGuest.PreferredRoomType == room.Room_Type;
+
+                <div class="room-card @GetStatusClass(room.Status) @(isPreferred ? "preferred-room" : "")">
                     <div class="room-header">
-                        <span class="room-number">Room @room.RoomNo</span>
+                        <span class="room-number">
+                            @if (isPreferred)
+                            {
+                                <span class="star-icon">⭐</span>
+                            }
+                            Room @room.RoomNo
+                        </span>
                         <span class="status-badge">@room.Status</span>
                     </div>
                     <div class="room-info">
@@ -77,6 +108,10 @@
     private List<Room> rooms = new();
     private bool searched = false;
 
+    // Guest preference properties
+    private string guestSearchQuery = "";
+    private GuestProfile? selectedGuest = null;
+
     private List<Room> allRooms = new()
     {
         new Room { Room_ID = 1, RoomNo = "101", Room_Type = "Single", Capacity = 1, Price = 3000, Status = "Available", IsEcoCertified = true },
@@ -87,13 +122,43 @@
         new Room { Room_ID = 6, RoomNo = "106", Room_Type = "Single", Capacity = 1, Price = 3500, Status = "Available", IsEcoCertified = false },
     };
 
-    private void SearchRooms()
+    private async Task LoadGuestByEmail()
+    {
+        if (string.IsNullOrEmpty(guestSearchQuery))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Please enter a guest email.");
+            return;
+        }
+
+        selectedGuest = await GuestService.GetGuestByEmailAsync(guestSearchQuery);
+        if (selectedGuest != null)
+        {
+            // Auto-apply preferred room type if exists
+            if (!string.IsNullOrEmpty(selectedGuest.PreferredRoomType))
+            {
+                roomType = selectedGuest.PreferredRoomType;
+                await SearchRooms();
+            }
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Guest not found. Create a profile first.");
+        }
+    }
+
+    private async Task SearchRooms()
     {
         searched = true;
         rooms = allRooms.Where(r =>
             r.Capacity >= guests &&
             (string.IsNullOrEmpty(roomType) || r.Room_Type == roomType)
         ).ToList();
+
+        // Sort: Preferred room type first if guest is selected
+        if (selectedGuest != null && !string.IsNullOrEmpty(selectedGuest.PreferredRoomType))
+        {
+            rooms = rooms.OrderByDescending(r => r.Room_Type == selectedGuest.PreferredRoomType).ToList();
+        }
     }
 
     private async Task GoBack()
@@ -111,7 +176,13 @@
 
     private void BookRoom(Room room)
     {
-        Navigation.NavigateTo("/new-booking/" + room.Room_ID);
+        // Pass guest info if selected
+        var url = "/new-booking/" + room.Room_ID;
+        if (selectedGuest != null)
+        {
+            url += $"?guestEmail={Uri.EscapeDataString(selectedGuest.Email)}";
+        }
+        Navigation.NavigateTo(url);
     }
 }
 
@@ -148,6 +219,55 @@
     h2 {
         color: #2e7d32;
         margin-bottom: 0;
+    }
+
+    .guest-selector {
+        background: #f0f7f0;
+        padding: 1rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+    }
+
+        .guest-selector label {
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+    .guest-search {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+        .guest-search input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+
+    .btn-search-guest {
+        padding: 10px 20px;
+        background: #2196f3;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .selected-guest {
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: #e8f5e9;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+    }
+
+    .pref-hint {
+        font-size: 0.85rem;
+        color: #ff9800;
     }
 
     .search-bar {
@@ -208,6 +328,19 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
         border-left: 5px solid #ccc;
         background: white;
+        transition: all 0.2s;
+    }
+
+    .preferred-room {
+        border-left-color: #ffd700;
+        border: 2px solid #ffd700;
+        background: #fffef5;
+        box-shadow: 0 4px 12px rgba(255, 215, 0, 0.2);
+    }
+
+    .star-icon {
+        color: #ffd700;
+        margin-right: 4px;
     }
 
     .status-available {
