@@ -38,6 +38,7 @@ public static class MauiProgram
 		builder.Services.AddSingleton<ShareService>();
 		builder.Services.AddSingleton<GuestService>();
 		builder.Services.AddSingleton<PreferenceService>();
+		builder.Services.AddSingleton<GroupBookingService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
