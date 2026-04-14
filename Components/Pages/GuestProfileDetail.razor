@@ -1,0 +1,344 @@
+@page "/guest-profile-detail/{Id:int}"
+@using LodgeStay.Models
+@using LodgeStay.Services
+@inject NavigationManager Navigation
+@inject GuestService GuestService
+@inject LoyaltyService LoyaltyService
+@inject ReservationService ReservationService
+
+<div class="detail-container">
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">← Back</button>
+        <h2>Guest Profile</h2>
+        @if (!isEditing)
+        {
+            <button class="btn-edit" @onclick="ToggleEdit">✏️ Edit</button>
+        }
+    </div>
+
+    @if (guest == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="profile-card">
+            <div class="profile-header">
+                <div class="avatar">👤</div>
+                <div class="guest-name">
+                    <h3>@guest.Name</h3>
+                    <p>📧 @guest.Email | 📞 @guest.PhoneNo</p>
+                    <p>Member since @guest.CreatedAt.ToString("MMM yyyy")</p>
+                </div>
+                <div class="loyalty-card @GetTierClass(guest.LoyaltyTier)">
+                    <span class="tier-label">@guest.LoyaltyTier</span>
+                    <span class="points-large">⭐ @guest.LoyaltyPoints pts</span>
+                    <div class="progress-bg">
+                        <div class="progress-fill" style="width: @GetProgressPercent(guest.LoyaltyPoints)%"></div>
+                    </div>
+                    <span class="next-tier">@GetNextTierText(guest.LoyaltyPoints)</span>
+                </div>
+            </div>
+
+            @if (isEditing)
+            {
+                <div class="edit-section">
+                    <h4>✏️ Edit Preferences</h4>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Preferred Room Type</label>
+                            <select @bind="editRoomType">
+                                <option value="">Any</option>
+                                <option value="Single">Single</option>
+                                <option value="Double">Double</option>
+                                <option value="Suite">Suite</option>
+                                <option value="Family">Family</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bed Preference</label>
+                            <select @bind="editBedType">
+                                <option value="">Any</option>
+                                <option value="King">King</option>
+                                <option value="Queen">Queen</option>
+                                <option value="Twin">Twin</option>
+                                <option value="Single">Single</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Floor Preference</label>
+                        <select @bind="editFloor">
+                            <option value="">Any</option>
+                            <option value="Ground">Ground Floor</option>
+                            <option value="1st">1st Floor</option>
+                            <option value="2nd">2nd Floor</option>
+                            <option value="3rd">3rd Floor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Dietary Notes</label>
+                        <textarea @bind="editDietary" rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Amenity Notes</label>
+                        <textarea @bind="editAmenity" rows="2"></textarea>
+                    </div>
+                    <div class="edit-actions">
+                        <button class="btn-cancel" @onclick="ToggleEdit">Cancel</button>
+                        <button class="btn-save" @onclick="SaveEdit">Save Changes</button>
+                    </div>
+                    @if (!string.IsNullOrEmpty(saveMessage))
+                    {
+                        <p class="save-msg">✅ @saveMessage</p>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="preferences-section">
+                    <h4>💼 Saved Preferences</h4>
+                    <div class="prefs-grid">
+                        <div class="pref-item"><strong>Room Type:</strong> @(string.IsNullOrEmpty(guest.PreferredRoomType) ? "Any" : guest.PreferredRoomType)</div>
+                        <div class="pref-item"><strong>Bed:</strong> @(string.IsNullOrEmpty(guest.PreferredBedType) ? "Any" : guest.PreferredBedType)</div>
+                        <div class="pref-item"><strong>Floor:</strong> @(string.IsNullOrEmpty(guest.PreferredFloor) ? "Any" : guest.PreferredFloor)</div>
+                        <div class="pref-item"><strong>Dietary:</strong> @(string.IsNullOrEmpty(guest.DietaryNotes) ? "None" : guest.DietaryNotes)</div>
+                        <div class="pref-item"><strong>Amenities:</strong> @(string.IsNullOrEmpty(guest.AmenityNotes) ? "None" : guest.AmenityNotes)</div>
+                    </div>
+                </div>
+            }
+
+            <div class="loyalty-actions">
+                <h4>🎁 Loyalty Points</h4>
+                <div class="loyalty-controls">
+                    <div class="earn-box">
+                        <label>Award Points (nights stayed)</label>
+                        <div class="earn-row">
+                            <input type="number" @bind="nightsToAward" min="1" max="30" />
+                            <button class="btn-award" @onclick="AwardPoints">+@(nightsToAward * 10) pts</button>
+                        </div>
+                    </div>
+                    <div class="redeem-box">
+                        <label>Redeem Points (100 pts = Rs.100)</label>
+                        <div class="earn-row">
+                            <input type="number" @bind="pointsToRedeem" min="100" step="100" max="@guest.LoyaltyPoints" />
+                            <button class="btn-redeem" @onclick="RedeemPoints" disabled="@(pointsToRedeem < 100 || pointsToRedeem > guest.LoyaltyPoints)">Redeem</button>
+                        </div>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(loyaltyMessage))
+                {
+                    <div class="loyalty-msg @(isLoyaltyError ? "error-message" : "success-message")">@loyaltyMessage</div>
+                }
+            </div>
+
+            <div class="history-section">
+                <h4>📋 Booking History</h4>
+                @if (bookingHistory.Count == 0)
+                {
+                    <p class="no-history">No previous bookings.</p>
+                }
+                else
+                {
+                    <table class="history-table">
+                        <thead>
+                            <tr><th>Booking Ref</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Total</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var booking in bookingHistory)
+                            {
+                                <tr>
+                                    <td>@booking.BookingReference</td>
+                                    <td>Room @booking.Room_ID</td>
+                                    <td>@booking.CheckIn.ToString("dd MMM yyyy")</td>
+                                    <td>@booking.CheckOut.ToString("dd MMM yyyy")</td>
+                                    <td>Rs. @booking.TotalPrice</td>
+                                    <td><span class="status-@booking.Status.ToLower()">@booking.Status</span></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private GuestProfile? guest;
+    private List<Reservation> bookingHistory = new();
+    private bool isEditing = false;
+    private string editRoomType = "";
+    private string editBedType = "";
+    private string editFloor = "";
+    private string editDietary = "";
+    private string editAmenity = "";
+    private string saveMessage = "";
+    private string loyaltyMessage = "";
+    private bool isLoyaltyError = false;
+    private int nightsToAward = 1;
+    private int pointsToRedeem = 100;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        guest = await GuestService.GetGuestByIdAsync(Id);
+        if (guest != null)
+        {
+            editRoomType = guest.PreferredRoomType;
+            editBedType = guest.PreferredBedType;
+            editFloor = guest.PreferredFloor;
+            editDietary = guest.DietaryNotes;
+            editAmenity = guest.AmenityNotes;
+
+            var all = await ReservationService.GetReservationsAsync();
+            bookingHistory = all.Where(r => r.GuestEmail == guest.Email).ToList();
+        }
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/guest-profiles");
+
+    private void ToggleEdit()
+    {
+        isEditing = !isEditing;
+        saveMessage = "";
+    }
+
+    private async Task SaveEdit()
+    {
+        if (guest == null) return;
+        guest.PreferredRoomType = editRoomType;
+        guest.PreferredBedType = editBedType;
+        guest.PreferredFloor = editFloor;
+        guest.DietaryNotes = editDietary;
+        guest.AmenityNotes = editAmenity;
+        await GuestService.UpdateGuestAsync(guest);
+        saveMessage = "Preferences saved!";
+        isEditing = false;
+    }
+
+    private async Task AwardPoints()
+    {
+        if (guest == null) return;
+        await LoyaltyService.EarnPointsAsync(guest.Id, nightsToAward);
+        guest = await GuestService.GetGuestByIdAsync(Id);
+        loyaltyMessage = $"✅ {nightsToAward * 10} points awarded!";
+        isLoyaltyError = false;
+    }
+
+    private async Task RedeemPoints()
+    {
+        if (guest == null || pointsToRedeem < 100) return;
+
+        var (success, discount) = await LoyaltyService.RedeemPointsAsync(
+            guest.Id, pointsToRedeem);
+
+        if (success)
+        {
+            // Find their most recent confirmed booking and apply discount
+            var confirmedBooking = bookingHistory
+                .Where(r => r.Status == "Confirmed")
+                .OrderByDescending(r => r.Created_at)
+                .FirstOrDefault();
+
+            if (confirmedBooking != null)
+            {
+                confirmedBooking.TotalPrice = Math.Max(
+                    confirmedBooking.TotalPrice - discount, 0);
+                await ReservationService.UpdateReservationAsync(confirmedBooking);
+
+                // Refresh booking history
+                var all = await ReservationService.GetReservationsAsync();
+                bookingHistory = all.Where(r => r.GuestEmail == guest.Email).ToList();
+
+                loyaltyMessage = $"✅ Rs. {discount} discount applied to booking {confirmedBooking.BookingReference}! New total: Rs. {confirmedBooking.TotalPrice}";
+            }
+            else
+            {
+                loyaltyMessage = $"✅ {pointsToRedeem} points redeemed! Rs. {discount} discount will apply to next booking.";
+            }
+
+            guest = await GuestService.GetGuestByIdAsync(guest.Id);
+            isLoyaltyError = false;
+            pointsToRedeem = 100;
+        }
+        else
+        {
+            loyaltyMessage = "❌ Insufficient points or minimum 100 points required.";
+            isLoyaltyError = true;
+        }
+    }
+
+    private string GetTierClass(string tier) => tier switch
+    {
+        "Gold" => "tier-gold",
+        "Silver" => "tier-silver",
+        _ => "tier-bronze"
+    };
+
+    private int GetProgressPercent(int points)
+    {
+        if (points >= 5000) return 100;
+        if (points >= 1000) return (points - 1000) * 100 / 4000;
+        return points * 100 / 1000;
+    }
+
+    private string GetNextTierText(int points)
+    {
+        if (points >= 5000) return "🎉 Max Tier!";
+        if (points >= 1000) return $"{5000 - points} to Gold";
+        return $"{1000 - points} to Silver";
+    }
+}
+
+<style>
+    .detail-container { padding: 2rem; max-width: 1000px; margin: 0 auto; }
+    .page-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
+    .page-header h2 { flex: 1; margin: 0; color: #2e7d32; }
+    .btn-back { padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #f5f5f5; border: 1px solid #ddd; }
+    .btn-edit { padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #2196f3; color: white; border: none; }
+    .profile-card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .profile-header { display: flex; align-items: center; gap: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #eee; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .avatar { font-size: 4rem; }
+    .guest-name { flex: 1; }
+    .guest-name h3 { margin: 0; color: #333; font-size: 1.4rem; }
+    .guest-name p { margin: 0.2rem 0; color: #666; font-size: 0.9rem; }
+    .loyalty-card { padding: 1rem; border-radius: 10px; text-align: center; min-width: 150px; color: white; }
+    .tier-gold { background: linear-gradient(135deg, #f9a825, #ffd700); color: #5d4037; }
+    .tier-silver { background: linear-gradient(135deg, #9e9e9e, #e0e0e0); color: #333; }
+    .tier-bronze { background: linear-gradient(135deg, #cd7f32, #e8a87c); }
+    .tier-label { display: block; font-weight: 700; font-size: 1rem; }
+    .points-large { display: block; font-size: 1.3rem; font-weight: bold; margin: 0.25rem 0; }
+    .progress-bg { background: rgba(255,255,255,0.3); border-radius: 4px; height: 6px; margin: 0.25rem 0; }
+    .progress-fill { height: 6px; background: white; border-radius: 4px; }
+    .next-tier { font-size: 0.75rem; opacity: 0.9; }
+    .preferences-section, .edit-section, .history-section, .loyalty-actions { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #f0f0f0; }
+    h4 { color: #2e7d32; margin-bottom: 1rem; }
+    .prefs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; background: #f9f9f9; padding: 1rem; border-radius: 8px; }
+    .pref-item { font-size: 0.9rem; color: #555; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .form-group { margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 4px; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; }
+    .edit-actions { display: flex; gap: 1rem; margin-top: 1rem; }
+    .btn-cancel { flex: 1; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; }
+    .btn-save { flex: 2; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    .save-msg { color: #2e7d32; font-size: 0.9rem; margin-top: 0.5rem; }
+    .loyalty-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .earn-box, .redeem-box { background: #f9f9f9; padding: 1rem; border-radius: 8px; }
+    .earn-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .earn-row input { flex: 1; }
+    .btn-award { padding: 10px 16px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+    .btn-redeem { padding: 10px 16px; background: #1565c0; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; }
+    .btn-redeem:disabled { background: #ccc; cursor: not-allowed; }
+    .loyalty-msg { padding: 10px; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; }
+    .success-message { background: #e8f5e9; color: #2e7d32; }
+    .error-message { background: #ffebee; color: #c62828; }
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th, .history-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+    .history-table th { background: #f5f5f5; }
+    .status-confirmed { color: #2e7d32; font-weight: 600; }
+    .status-cancelled { color: #c62828; }
+    .no-history { color: #888; text-align: center; padding: 1rem; }
+</style>

@@ -1,0 +1,281 @@
+@page "/loyalty-points"
+@using LodgeStay.Models
+@using LodgeStay.Services
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject GuestService GuestService
+@inject LoyaltyService LoyaltyService
+@inject ReservationService ReservationService
+
+<div class="loyalty-container">
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">← Back</button>
+        <h2>⭐ Loyalty Points</h2>
+    </div>
+
+    <div class="guest-selector">
+        <label>Select Guest</label>
+        <select value="@selectedGuestId" @onchange="OnGuestSelectedChange">
+            <option value="0">-- Select a guest --</option>
+            @foreach (var g in allGuests)
+            {
+                <option value="@g.Id">@g.Name (@g.Email)</option>
+            }
+        </select>
+    </div>
+
+    @if (selectedGuest != null)
+    {
+        <div class="loyalty-layout">
+            <div class="left-panel">
+                <div class="loyalty-card @GetTierClass(selectedGuest.LoyaltyTier)">
+                    <div class="tier-header">
+                        <span class="tier-icon">⭐</span>
+                        <span class="tier-name">@selectedGuest.LoyaltyTier Tier</span>
+                    </div>
+                    <div class="points-display">
+                        <span class="points-value">@selectedGuest.LoyaltyPoints</span>
+                        <span class="points-label">points</span>
+                    </div>
+                    <div class="progress-bg">
+                        <div class="progress-fill" style="width: @GetProgressPercent(selectedGuest.LoyaltyPoints)%"></div>
+                    </div>
+                    <div class="next-tier-text">@GetNextTierText(selectedGuest.LoyaltyPoints)</div>
+                </div>
+
+                <div class="guest-summary">
+                    <h4>👤 @selectedGuest.Name</h4>
+                    <p>📧 @selectedGuest.Email</p>
+                    <p>📞 @selectedGuest.PhoneNo</p>
+                </div>
+
+                <div class="earn-section">
+                    <h4>➕ Award Points</h4>
+                    <p class="hint">10 points awarded per night stayed</p>
+                    <div class="form-group">
+                        <label>Number of Nights</label>
+                        <input type="number" @bind="nightsToAward" min="1" max="30" />
+                    </div>
+                    <p class="points-preview">Will award: <strong>@(nightsToAward * 10) points</strong></p>
+                    <button class="btn-award" @onclick="AwardPoints">Award Points</button>
+                </div>
+            </div>
+
+            <div class="right-panel">
+                <div class="redeem-section">
+                    <h4>🎁 Redeem Points</h4>
+                    <p class="hint">100 points = Rs. 100 discount</p>
+                    <p>Current Balance: <strong>@selectedGuest.LoyaltyPoints pts</strong></p>
+
+                    <div class="slider-group">
+                        <input type="range"
+                               min="0"
+                               max="@((selectedGuest.LoyaltyPoints / 100) * 100)"
+                               step="100"
+                               @bind="redeemPoints"
+                               @bind:event="oninput" />
+                        <div class="slider-labels">
+                            <span>0</span>
+                            <span>@((selectedGuest.LoyaltyPoints / 100) * 100) pts</span>
+                        </div>
+                    </div>
+
+                    <div class="redeem-summary">
+                        <div class="redeem-row">
+                            <span>Points to redeem:</span>
+                            <strong>@redeemPoints</strong>
+                        </div>
+                        <div class="redeem-row">
+                            <span>Discount value:</span>
+                            <strong>Rs. @redeemPoints</strong>
+                        </div>
+                    </div>
+
+                    <button class="btn-redeem" @onclick="RedeemPoints" disabled="@(redeemPoints < 100)">
+                        Apply Discount
+                    </button>
+                </div>
+
+                <div class="history-section">
+                    <h4>📋 Points History</h4>
+                    <div class="history-list">
+                        @foreach (var entry in pointsHistory)
+                        {
+                            <div class="history-entry @(entry.IsEarn ? "earn" : "redeem")">
+                                <div class="entry-desc">@entry.Description</div>
+                                <div class="entry-points">@(entry.IsEarn ? "+" : "-")@entry.Points pts</div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(feedbackMessage))
+        {
+            <div class="feedback @(isError ? "error-msg" : "success-msg")">@feedbackMessage</div>
+        }
+    }
+</div>
+
+@code {
+    private List<GuestProfile> allGuests = new();
+    private GuestProfile? selectedGuest;
+    private int selectedGuestId = 0;
+    private int nightsToAward = 1;
+    private int redeemPoints = 0;
+    private string feedbackMessage = "";
+    private bool isError = false;
+
+    private List<PointsEntry> pointsHistory = new()
+    {
+        new PointsEntry { Description = "Stay completed - 3 nights", Points = 30, IsEarn = true },
+        new PointsEntry { Description = "Stay completed - 5 nights", Points = 50, IsEarn = true },
+        new PointsEntry { Description = "Points redeemed", Points = 200, IsEarn = false },
+        new PointsEntry { Description = "Stay completed - 2 nights", Points = 20, IsEarn = true },
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        allGuests = await GuestService.GetAllGuestsAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && selectedGuestId > 0)
+        {
+            await LoadSelectedGuest();
+        }
+    }
+
+    private async Task OnGuestSelectedChange(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var id))
+        {
+            selectedGuestId = id;
+            await LoadSelectedGuest();
+        }
+    }
+
+    private async Task LoadSelectedGuest()
+    {
+        if (selectedGuestId > 0)
+        {
+            selectedGuest = await GuestService.GetGuestByIdAsync(selectedGuestId);
+            redeemPoints = 0;
+            feedbackMessage = "";
+        }
+        else
+        {
+            selectedGuest = null;
+        }
+    }
+
+    private async Task AwardPoints()
+    {
+        if (selectedGuest == null) return;
+
+        await LoyaltyService.EarnPointsAsync(selectedGuest.Id, nightsToAward);
+        selectedGuest = await GuestService.GetGuestByIdAsync(selectedGuest.Id);
+
+        pointsHistory.Insert(0, new PointsEntry
+            {
+                Description = $"Stay completed - {nightsToAward} nights",
+                Points = nightsToAward * 10,
+                IsEarn = true
+            });
+
+        feedbackMessage = $"✅ {nightsToAward * 10} points awarded to {selectedGuest?.Name}!";
+        isError = false;
+        nightsToAward = 1;
+
+        StateHasChanged();
+    }
+
+    private async Task RedeemPoints()
+    {
+        if (selectedGuest == null || redeemPoints < 100) return;
+
+        var (success, discount) = await LoyaltyService.RedeemPointsAsync(
+            selectedGuest.Id, redeemPoints);
+
+        if (success)
+        {
+            // Find their most recent confirmed booking
+            var all = await ReservationService.GetReservationsAsync();
+            var confirmedBooking = all
+                .Where(r => r.GuestEmail == selectedGuest.Email &&
+                            r.Status == "Confirmed")
+                .OrderByDescending(r => r.Created_at)
+                .FirstOrDefault();
+
+            if (confirmedBooking != null)
+            {
+                confirmedBooking.TotalPrice = Math.Max(
+                    confirmedBooking.TotalPrice - discount, 0);
+                await ReservationService.UpdateReservationAsync(confirmedBooking);
+
+                feedbackMessage = $"✅ Rs. {discount} discount applied to booking {confirmedBooking.BookingReference}! New total: Rs. {confirmedBooking.TotalPrice}";
+            }
+            else
+            {
+                feedbackMessage = $"✅ {redeemPoints} points redeemed! Rs. {discount} discount will apply to next booking.";
+            }
+
+            pointsHistory.Insert(0, new PointsEntry
+                {
+                    Description = $"Redeemed - Rs. {discount} discount",
+                    Points = redeemPoints,
+                    IsEarn = false
+                });
+
+            selectedGuest = await GuestService.GetGuestByIdAsync(selectedGuest.Id);
+            isError = false;
+            redeemPoints = 0;
+        }
+        else
+        {
+            feedbackMessage = "❌ Insufficient points or minimum 100 points required.";
+            isError = true;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task GoBack()
+    {
+        await JSRuntime.InvokeVoidAsync("history.back");
+    }
+
+    private string GetTierClass(string tier) => tier switch
+    {
+        "Gold" => "tier-gold",
+        "Silver" => "tier-silver",
+        _ => "tier-bronze"
+    };
+
+    private int GetProgressPercent(int points)
+    {
+        if (points >= 5000) return 100;
+        if (points >= 1000) return (points - 1000) * 100 / 4000;
+        return points * 100 / 1000;
+    }
+
+    private string GetNextTierText(int points)
+    {
+        if (points >= 5000) return "🎉 Max Tier Reached!";
+        if (points >= 1000) return $"{5000 - points} points to Gold";
+        return $"{1000 - points} points to Silver";
+    }
+
+    public class PointsEntry
+    {
+        public string Description { get; set; } = "";
+        public int Points { get; set; }
+        public bool IsEarn { get; set; }
+    }
+}
+
+<style>
+    /* ... all your existing styles remain the same ... */
+</style>

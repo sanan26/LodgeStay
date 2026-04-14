@@ -1,0 +1,419 @@
+@page "/group-booking"
+@using LodgeStay.Models
+@using LodgeStay.Services
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject GroupBookingService GroupBookingService
+@inject ReservationService ReservationService
+
+<div class="group-booking-container">
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">← Back</button>
+        <h2>👨‍👩‍👧‍👦 Group / Family Booking</h2>
+    </div>
+
+    <div class="booking-form">
+        <div class="form-section">
+            <h3>Group Information</h3>
+            <div class="form-group">
+                <label>Group Name / Organizer *</label>
+                <input type="text" @bind="groupName" placeholder="e.g., Khan Family Reunion" />
+            </div>
+            <div class="form-group">
+                <label>Organizer Email *</label>
+                <input type="email" @bind="organizerEmail" placeholder="organizer@example.com" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Check-in Date</label>
+                    <input type="date" @bind="checkIn" @bind:format="yyyy-MM-dd" />
+                </div>
+                <div class="form-group">
+                    <label>Check-out Date</label>
+                    <input type="date" @bind="checkOut" @bind:format="yyyy-MM-dd" />
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>Select Rooms (@selectedRoomIds.Count selected)</h3>
+            @if (selectedRoomIds.Count >= 2)
+            {
+                <div class="discount-banner">
+                    🎉 Group discount applied: <strong>@discountPercent%</strong> off!
+                </div>
+            }
+            else if (selectedRoomIds.Count == 1)
+            {
+                <div class="info-banner">
+                    💡 Select 2+ rooms to unlock group discount!
+                </div>
+            }
+            <div class="rooms-grid">
+                @foreach (var room in availableRooms)
+                {
+                    <div class="room-selector @(selectedRoomIds.Contains(room.Room_ID) ? "selected" : "")"
+                         @onclick="() => ToggleRoom(room.Room_ID)">
+                        <div class="room-info">
+                            <strong>Room @room.RoomNo</strong>
+                            <span>@room.Room_Type | Capacity: @room.Capacity</span>
+                            <span>Rs. @room.Price / night</span>
+                        </div>
+                        <div class="check-indicator">
+                            @(selectedRoomIds.Contains(room.Room_ID) ? "✅" : "⬜")
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="summary-section">
+            <h3>Booking Summary</h3>
+            <div class="summary-card">
+                <div class="summary-row">
+                    <span>Total Nights:</span>
+                    <strong>@totalNights</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Number of Rooms:</span>
+                    <strong>@selectedRoomIds.Count</strong>
+                </div>
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <strong>Rs. @subtotal.ToString("F0")</strong>
+                </div>
+                <div class="summary-row discount">
+                    <span>Group Discount (@discountPercent%):</span>
+                    <strong>- Rs. @discountAmount.ToString("F0")</strong>
+                </div>
+                <div class="summary-row total">
+                    <span>Total Payable:</span>
+                    <strong>Rs. @totalPayable.ToString("F0")</strong>
+                </div>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-message">⚠️ @errorMessage</div>
+        }
+
+        <div class="form-actions">
+            <button class="btn-cancel" @onclick="GoBack">Cancel</button>
+            <button class="btn-confirm" @onclick="CreateGroupBooking"
+                    disabled="@(selectedRoomIds.Count < 1 || isSaving)">
+                @(isSaving ? "Creating..." : "Confirm Group Booking")
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string groupName = "";
+    private string organizerEmail = "";
+    private DateTime checkIn = DateTime.Now;
+    private DateTime checkOut = DateTime.Now.AddDays(1);
+    private List<int> selectedRoomIds = new();
+    private string errorMessage = "";
+    private bool isSaving = false;
+
+    private List<Room> availableRooms = new()
+    {
+        new Room { Room_ID = 1, RoomNo = "101", Room_Type = "Single", Capacity = 1, Price = 3000, Status = "Available" },
+        new Room { Room_ID = 2, RoomNo = "102", Room_Type = "Double", Capacity = 2, Price = 5000, Status = "Available" },
+        new Room { Room_ID = 4, RoomNo = "104", Room_Type = "Family", Capacity = 4, Price = 12000, Status = "Available" },
+        new Room { Room_ID = 6, RoomNo = "106", Room_Type = "Single", Capacity = 1, Price = 3500, Status = "Available" },
+        new Room { Room_ID = 7, RoomNo = "107", Room_Type = "Double", Capacity = 2, Price = 5500, Status = "Available" },
+        new Room { Room_ID = 8, RoomNo = "108", Room_Type = "Suite", Capacity = 3, Price = 9000, Status = "Available" },
+    };
+
+    private int totalNights => Math.Max((checkOut - checkIn).Days, 0);
+
+    private double subtotal => selectedRoomIds
+        .Select(id => availableRooms.FirstOrDefault(r => r.Room_ID == id))
+        .Where(r => r != null)
+        .Sum(r => r!.Price * totalNights);
+
+    private int discountPercent => selectedRoomIds.Count >= 5 ? 20 :
+                                   selectedRoomIds.Count >= 3 ? 15 :
+                                   selectedRoomIds.Count >= 2 ? 10 : 0;
+
+    private double discountAmount => subtotal * discountPercent / 100;
+    private double totalPayable => subtotal - discountAmount;
+
+    private void ToggleRoom(int roomId)
+    {
+        if (selectedRoomIds.Contains(roomId))
+            selectedRoomIds.Remove(roomId);
+        else
+            selectedRoomIds.Add(roomId);
+    }
+
+    private async Task GoBack()
+    {
+        await JSRuntime.InvokeVoidAsync("history.back");
+    }
+
+    private async Task CreateGroupBooking()
+    {
+        if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(organizerEmail))
+        {
+            errorMessage = "Please fill in group name and organizer email.";
+            return;
+        }
+        if (selectedRoomIds.Count < 1)
+        {
+            errorMessage = "Please select at least 1 room.";
+            return;
+        }
+        if (checkOut <= checkIn)
+        {
+            errorMessage = "Check-out must be after check-in.";
+            return;
+        }
+
+        // Check each room for conflicts
+        foreach (var roomId in selectedRoomIds)
+        {
+            var available = await ReservationService.IsRoomAvailableAsync(
+                roomId, checkIn, checkOut);
+            if (!available)
+            {
+                var room = availableRooms.FirstOrDefault(r => r.Room_ID == roomId);
+                errorMessage = $"Room {room?.RoomNo} is already booked for these dates. Please deselect it.";
+                isSaving = false;
+                return;
+            }
+        }
+        isSaving = true;
+        errorMessage = "";
+
+        try
+        {
+            var booking = await GroupBookingService.CreateGroupBookingAsync(
+                groupName, organizerEmail, selectedRoomIds, checkIn, checkOut, availableRooms);
+
+            Navigation.NavigateTo($"/group-booking-folio/{booking.MasterReference}" +
+                $"?groupName={Uri.EscapeDataString(groupName)}" +
+                $"&rooms={selectedRoomIds.Count}" +
+                $"&discount={discountPercent}" +
+                $"&total={(int)totalPayable}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
+
+<style>
+    .group-booking-container {
+        padding: 2rem;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+        .page-header h2 {
+            margin: 0;
+            color: #2e7d32;
+        }
+
+    .btn-back {
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+    }
+
+    .booking-form {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+
+        .form-section h3 {
+            color: #2e7d32;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+
+    .discount-banner {
+        background: #e8f5e9;
+        color: #2e7d32;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 4px;
+    }
+
+    input {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        box-sizing: border-box;
+    }
+
+    .rooms-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 1rem;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .room-selector {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .room-selector:hover {
+            border-color: #2e7d32;
+        }
+
+        .room-selector.selected {
+            background: #e8f5e9;
+            border-color: #2e7d32;
+        }
+
+    .room-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 0.9rem;
+    }
+
+    .check-indicator {
+        font-size: 1.5rem;
+    }
+
+    .summary-section {
+        margin-bottom: 1.5rem;
+    }
+
+        .summary-section h3 {
+            color: #2e7d32;
+            margin-bottom: 1rem;
+        }
+
+    .summary-card {
+        background: #f5f5f5;
+        padding: 1rem;
+        border-radius: 8px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 0;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+        .summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .summary-row.discount {
+            color: #c62828;
+        }
+
+        .summary-row.total {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-cancel {
+        flex: 1;
+        padding: 12px;
+        background: #f5f5f5;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .btn-confirm {
+        flex: 2;
+        padding: 12px;
+        background: #2e7d32;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+        .btn-confirm:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-confirm:hover:not(:disabled) {
+            background: #1b5e20;
+        }
+
+    .info-banner {
+        background: #e3f2fd;
+        color: #1565c0;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+    .error-message {
+        background: #ffebee;
+        color: #c62828;
+        padding: 10px;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
+</style>

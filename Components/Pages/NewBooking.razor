@@ -1,0 +1,266 @@
+﻿@page "/new-booking/{RoomId:int}"
+@using LodgeStay.Models
+@using LodgeStay.Services
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ReservationService ReservationService
+
+<div class="booking-container">
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">← Back</button>
+        <h2>📋 New Booking</h2>
+    </div>
+
+    <div class="booking-form">
+        <h3>Guest Details</h3>
+        <div class="form-group">
+            <label>Guest Name</label>
+            <input type="text" @bind="guestName" placeholder="Enter guest name" />
+        </div>
+        <div class="form-group">
+            <label>Guest Email</label>
+            <input type="email" @bind="guestEmail" placeholder="Enter guest email" />
+        </div>
+        <div class="form-group">
+            <label>Guest Phone</label>
+            <input type="text" @bind="guestPhone" placeholder="Enter guest phone" />
+        </div>
+
+        <h3>Booking Details</h3>
+        <div class="form-group">
+            <label>Check-in Date</label>
+            <input type="date" @bind="checkIn" @bind:format="yyyy-MM-dd" />
+        </div>
+        <div class="form-group">
+            <label>Check-out Date</label>
+            <input type="date" @bind="checkOut" @bind:format="yyyy-MM-dd" />
+        </div>
+        <div class="form-group">
+            <label>Number of Guests</label>
+            <input type="number" @bind="numberOfGuests" min="1" max="10" />
+        </div>
+
+        <div class="room-summary">
+            <h3>Selected Room</h3>
+            <p>🛏️ Room @RoomId</p>
+            <p>📅 Total nights: @totalNights</p>
+            <p class="total-price">Total: Rs. @(totalNights * 5000)</p>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="error-box">⚠️ @errorMessage</div>
+        }
+
+        <div class="form-actions">
+            <button class="btn-cancel" @onclick="GoBack">Cancel</button>
+            <button class="btn-confirm" @onclick="ConfirmBooking">Confirm Booking</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int RoomId { get; set; }
+
+    private string guestName = "";
+    private string guestEmail = "";
+    private string guestPhone = "";
+    private DateTime checkIn = DateTime.Now;
+    private DateTime checkOut = DateTime.Now.AddDays(1);
+    private int numberOfGuests = 1;
+    private string errorMessage = "";
+    private bool isSaving = false;
+
+    private int totalNights => Math.Max((checkOut - checkIn).Days, 0);
+    private int totalPrice => totalNights * 5000;
+
+    private async Task GoBack()
+    {
+        await JSRuntime.InvokeVoidAsync("history.back");
+    }
+
+    private async Task ConfirmBooking()
+    {
+        if (string.IsNullOrEmpty(guestName) || string.IsNullOrEmpty(guestEmail))
+        {
+            errorMessage = "Please fill in all required fields.";
+            return;
+        }
+        if (checkOut <= checkIn)
+        {
+            errorMessage = "Check-out date must be after check-in date.";
+            return;
+        }
+
+        // Create the reservation
+        var reservation = new Reservation
+            {
+                Reservation_ID = new Random().Next(1000, 9999),
+                BookingReference = "LS-" + DateTime.Now.ToString("yyyyMMddHHmmss"),
+                GuestName = guestName,
+                GuestEmail = guestEmail,
+                GuestPhone = guestPhone,
+                Room_ID = RoomId,
+                CheckIn = checkIn,
+                CheckOut = checkOut,
+                NumberOfGuests = numberOfGuests,
+                TotalPrice = totalPrice,
+                Status = "Confirmed"
+            };
+
+        // Check for double booking
+        var isAvailable = await ReservationService.IsRoomAvailableAsync(RoomId, checkIn, checkOut);
+        if (!isAvailable)
+        {
+            errorMessage = "This room is already booked for the selected dates. Please choose different dates or another room.";
+            isSaving = false;
+            return;
+        }
+        // Save to the service
+        await ReservationService.AddReservationAsync(reservation);
+
+        // Navigate to confirmation page with booking details
+        Navigation.NavigateTo("/booking-confirmation/" + reservation.BookingReference +
+            "?guest=" + Uri.EscapeDataString(guestName) +
+            "&room=" + RoomId +
+            "&checkin=" + checkIn.ToString("yyyy-MM-dd") +
+            "&checkout=" + checkOut.ToString("yyyy-MM-dd") +
+            "&total=" + totalPrice);
+    }
+}
+
+<style>
+    /* Your existing styles remain the same */
+    .booking-container {
+        padding: 2rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+        .page-header h2 {
+            margin-bottom: 0;
+        }
+
+    .btn-back {
+        padding: 8px 16px;
+        background: #f5f5f5;
+        color: #555;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
+        .btn-back:hover {
+            background: #e0e0e0;
+        }
+
+    h2 {
+        color: #2e7d32;
+    }
+
+    h3 {
+        color: #444;
+        margin: 1.5rem 0 1rem;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 0.5rem;
+    }
+
+    .booking-form {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #555;
+        margin-bottom: 4px;
+    }
+
+    input, select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        box-sizing: border-box;
+    }
+
+        input:focus {
+            outline: none;
+            border-color: #2e7d32;
+        }
+
+    .room-summary {
+        background: #f1f8e9;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 1rem 0;
+    }
+
+        .room-summary p {
+            margin: 0.3rem 0;
+            color: #555;
+        }
+
+    .total-price {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #2e7d32;
+    }
+
+    .error-box {
+        background: #ffebee;
+        color: #c62828;
+        padding: 10px;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .btn-cancel {
+        flex: 1;
+        padding: 12px;
+        background: #f5f5f5;
+        color: #555;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+    .btn-confirm {
+        flex: 2;
+        padding: 12px;
+        background: #2e7d32;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+
+        .btn-confirm:hover {
+            background: #1b5e20;
+        }
+</style>

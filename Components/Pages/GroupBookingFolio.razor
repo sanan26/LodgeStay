@@ -1,0 +1,89 @@
+@page "/group-booking-folio/{MasterReference}"
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<div class="folio-container">
+    <div class="folio-card">
+        <div class="success-icon">🎉</div>
+        <h2>Group Booking Confirmed!</h2>
+        <p class="master-ref">Master Reference: <strong>@MasterReference</strong></p>
+
+        <div class="folio-details">
+            <div class="detail-row">
+                <span>Group Name:</span>
+                <strong>@GroupName</strong>
+            </div>
+            <div class="detail-row">
+                <span>Number of Rooms:</span>
+                <strong>@RoomCount rooms</strong>
+            </div>
+            <div class="detail-row discount-row">
+                <span>Group Discount Applied:</span>
+                <strong>@DiscountPercent% off 🎊</strong>
+            </div>
+            <div class="detail-row total-row">
+                <span>Total Amount:</span>
+                <strong>Rs. @TotalAmount</strong>
+            </div>
+        </div>
+
+        <div class="share-section">
+            <p>📱 Share confirmation with group organizer:</p>
+            <button class="btn-share" @onclick="ShareConfirmation">📤 Share via WhatsApp</button>
+        </div>
+
+        <div class="actions">
+            <button class="btn-home" @onclick="GoHome">🏠 Dashboard</button>
+            <button class="btn-reservations" @onclick="GoToReservations">📋 All Reservations</button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public string MasterReference { get; set; } = "";
+    [SupplyParameterFromQuery] public string? groupName { get; set; }
+    [SupplyParameterFromQuery] public int rooms { get; set; }
+    [SupplyParameterFromQuery] public int discount { get; set; }
+    [SupplyParameterFromQuery] public int total { get; set; }
+
+    private string GroupName => groupName ?? "Group";
+    private int RoomCount => rooms;
+    private int DiscountPercent => discount;
+    private int TotalAmount => total;
+
+    private void GoHome() => Navigation.NavigateTo("/staff-dashboard");
+    private void GoToReservations() => Navigation.NavigateTo("/reservations");
+
+    private async Task ShareConfirmation()
+    {
+        var message = $"🏨 LodgeStay Group Booking Confirmed!\n\n" +
+                      $"Reference: {MasterReference}\n" +
+                      $"Group: {GroupName}\n" +
+                      $"Rooms: {RoomCount}\n" +
+                      $"Discount: {DiscountPercent}%\n" +
+                      $"Total: Rs. {TotalAmount}\n\n" +
+                      $"Thank you for choosing LodgeStay!";
+        await JSRuntime.InvokeVoidAsync("alert", "Share this message:\n\n" + message);
+    }
+}
+
+<style>
+    .folio-container { display: flex; justify-content: center; align-items: center; min-height: 100vh; background: linear-gradient(135deg, #e8f5e9, #c8e6c9); padding: 2rem; }
+    .folio-card { background: white; padding: 2.5rem; border-radius: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); width: 100%; max-width: 500px; text-align: center; }
+    .success-icon { font-size: 4rem; margin-bottom: 1rem; }
+    h2 { color: #2e7d32; margin-bottom: 0.5rem; }
+    .master-ref { color: #888; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .folio-details { text-align: left; margin: 1.5rem 0; }
+    .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .discount-row strong { color: #2e7d32; }
+    .total-row { font-size: 1.1rem; }
+    .total-row strong { color: #2e7d32; font-size: 1.3rem; }
+    .share-section { margin: 1.5rem 0; padding: 1rem; background: #f9fbe7; border-radius: 8px; }
+    .share-section p { color: #555; margin-bottom: 0.75rem; }
+    .btn-share { width: 100%; padding: 12px; background: #25d366; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 600; }
+    .btn-share:hover { background: #128c7e; }
+    .actions { display: flex; gap: 1rem; margin-top: 1rem; }
+    .btn-home { flex: 1; padding: 12px; background: #f5f5f5; color: #555; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; }
+    .btn-reservations { flex: 1; padding: 12px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; }
+    .btn-reservations:hover { background: #1b5e20; }
+</style>
