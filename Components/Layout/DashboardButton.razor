@@ -1,0 +1,33 @@
+﻿@inject NavigationManager Navigation
+@inject SessionService SessionService
+
+<button class="btn-dashboard" @onclick="GoToDashboard">🏠 Dashboard</button>
+
+@code {
+    private void GoToDashboard()
+    {
+        var role = SessionService.CurrentUser?.Role;
+        Navigation.NavigateTo(role switch
+        {
+            "Manager" => "/manager-dashboard",
+            "Owner" => "/owner-dashboard",
+            _ => "/staff-dashboard"
+        });
+    }
+}
+
+<style>
+    .btn-dashboard {
+        padding: 8px 16px;
+        background: brown;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
+        .btn-dashboard:hover {
+            background: maroon;
+        }
+</style>
