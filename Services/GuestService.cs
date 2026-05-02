@@ -1,57 +1,44 @@
-﻿using System;
-using System.Collections.Generic;
 using LodgeStay.Data;
 using LodgeStay.Models;
-using System.Threading.Tasks;
 
 namespace LodgeStay.Services
 {
     public class GuestService
     {
-        private readonly DatabaseContext _database;
+        private readonly DatabaseContext _db;
 
-        public GuestService(DatabaseContext database)
+        public GuestService(DatabaseContext db)
         {
-            _database = database;
+            _db = db;
         }
+
+        public Task<List<GuestProfile>> GetAllGuestsAsync()
+            => _db.GetAllGuestsAsync();
+
+        public Task<GuestProfile?> GetGuestByEmailAsync(string email)
+            => _db.GetGuestByEmailAsync(email);
+
+        public Task<GuestProfile?> GetGuestByIdAsync(int id)
+            => _db.GetGuestByIdAsync(id);
+
+        public Task<List<GuestProfile>> SearchGuestsAsync(string query)
+            => _db.SearchGuestsAsync(query);
 
         public async Task<bool> CreateGuestAsync(GuestProfile guest)
         {
-            var existingGuest = await _database.GetGuestByEmailAsync(guest.Email);
-            if (existingGuest != null)
-            {
-                return false;
-            }
-            else
-            {
-                await _database.InsertGuestAsync(guest);
-                return true;
-            }
+            var existing = await _db.GetGuestByEmailAsync(guest.Email);
+            if (existing != null) return false;
+
+            guest.CreatedAt = DateTime.UtcNow;
+            guest.LoyaltyTier = "Bronze";
+            await _db.InsertGuestAsync(guest);
+            return true;
         }
 
-        public async Task<GuestProfile?> GetGuestByEmailAsync(string email)
+        public async Task<bool> UpdateGuestAsync(GuestProfile guest)
         {
-            return await _database.GetGuestByEmailAsync(email);
-        }
-
-        public async Task<GuestProfile?> GetGuestByIdAsync(int id)
-        {
-            return await _database.GetGuestByIdAsync(id);
-        }
-
-        public async Task<List<GuestProfile>> GetAllGuestsAsync()
-        {
-            return await _database.SearchGuestsAsync("");
-        }
-
-        public async Task<int> UpdateGuestAsync(GuestProfile guest)
-        {
-            return await _database.UpdateGuestAsync(guest);
-        }
-
-        public async Task<List<GuestProfile>> SearchGuestAsync(string query)
-        {
-            return await _database.SearchGuestsAsync(query);
+            await _db.UpdateGuestAsync(guest);
+            return true;
         }
     }
 }
