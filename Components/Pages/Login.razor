@@ -1,8 +1,10 @@
 @page "/login"
 @using LodgeStay.Data
 @using LodgeStay.Models
+@using LodgeStay.Services
 @inject DatabaseContext DbContext
 @inject NavigationManager Navigation
+@inject SessionService SessionService
 
 <div class="login-container">
     <div class="login-card">
@@ -70,6 +72,9 @@
                 errorMessage = "Please verify your account first.";
                 return;
             }
+
+            // ✅ Set session so NavMenu updates
+            SessionService.Login(user);
 
             Navigation.NavigateTo(user.Role switch
             {
