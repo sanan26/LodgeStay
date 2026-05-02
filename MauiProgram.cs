@@ -38,6 +38,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<CalendarExportService>();
         builder.Services.AddSingleton<ShareService>();
 
+
         // Sprint 2 Services
         builder.Services.AddSingleton<GuestService>();
         builder.Services.AddSingleton<LoyaltyService>();
