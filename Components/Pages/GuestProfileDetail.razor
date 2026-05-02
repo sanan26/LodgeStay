@@ -3,7 +3,6 @@
 @using LodgeStay.Services
 @inject NavigationManager Navigation
 @inject GuestService GuestService
-@inject LoyaltyService LoyaltyService
 @inject ReservationService ReservationService
 
 <div class="detail-container">
@@ -108,29 +107,7 @@
                 </div>
             }
 
-            <div class="loyalty-actions">
-                <h4>🎁 Loyalty Points</h4>
-                <div class="loyalty-controls">
-                    <div class="earn-box">
-                        <label>Award Points (nights stayed)</label>
-                        <div class="earn-row">
-                            <input type="number" @bind="nightsToAward" min="1" max="30" />
-                            <button class="btn-award" @onclick="AwardPoints">+@(nightsToAward * 10) pts</button>
-                        </div>
-                    </div>
-                    <div class="redeem-box">
-                        <label>Redeem Points (100 pts = Rs.100)</label>
-                        <div class="earn-row">
-                            <input type="number" @bind="pointsToRedeem" min="100" step="100" max="@guest.LoyaltyPoints" />
-                            <button class="btn-redeem" @onclick="RedeemPoints" disabled="@(pointsToRedeem < 100 || pointsToRedeem > guest.LoyaltyPoints)">Redeem</button>
-                        </div>
-                    </div>
-                </div>
-                @if (!string.IsNullOrEmpty(loyaltyMessage))
-                {
-                    <div class="loyalty-msg @(isLoyaltyError ? "error-message" : "success-message")">@loyaltyMessage</div>
-                }
-            </div>
+            
 
             <div class="history-section">
                 <h4>📋 Booking History</h4>
@@ -176,10 +153,6 @@
     private string editDietary = "";
     private string editAmenity = "";
     private string saveMessage = "";
-    private string loyaltyMessage = "";
-    private bool isLoyaltyError = false;
-    private int nightsToAward = 1;
-    private int pointsToRedeem = 100;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -218,57 +191,6 @@
         isEditing = false;
     }
 
-    private async Task AwardPoints()
-    {
-        if (guest == null) return;
-        await LoyaltyService.EarnPointsAsync(guest.Id, nightsToAward);
-        guest = await GuestService.GetGuestByIdAsync(Id);
-        loyaltyMessage = $"✅ {nightsToAward * 10} points awarded!";
-        isLoyaltyError = false;
-    }
-
-    private async Task RedeemPoints()
-    {
-        if (guest == null || pointsToRedeem < 100) return;
-
-        var (success, discount) = await LoyaltyService.RedeemPointsAsync(
-            guest.Id, pointsToRedeem);
-
-        if (success)
-        {
-            // Find their most recent confirmed booking and apply discount
-            var confirmedBooking = bookingHistory
-                .Where(r => r.Status == "Confirmed")
-                .OrderByDescending(r => r.Created_at)
-                .FirstOrDefault();
-
-            if (confirmedBooking != null)
-            {
-                confirmedBooking.TotalPrice = Math.Max(
-                    confirmedBooking.TotalPrice - discount, 0);
-                await ReservationService.UpdateReservationAsync(confirmedBooking);
-
-                // Refresh booking history
-                var all = await ReservationService.GetReservationsAsync();
-                bookingHistory = all.Where(r => r.GuestEmail == guest.Email).ToList();
-
-                loyaltyMessage = $"✅ Rs. {discount} discount applied to booking {confirmedBooking.BookingReference}! New total: Rs. {confirmedBooking.TotalPrice}";
-            }
-            else
-            {
-                loyaltyMessage = $"✅ {pointsToRedeem} points redeemed! Rs. {discount} discount will apply to next booking.";
-            }
-
-            guest = await GuestService.GetGuestByIdAsync(guest.Id);
-            isLoyaltyError = false;
-            pointsToRedeem = 100;
-        }
-        else
-        {
-            loyaltyMessage = "❌ Insufficient points or minimum 100 points required.";
-            isLoyaltyError = true;
-        }
-    }
 
     private string GetTierClass(string tier) => tier switch
     {
