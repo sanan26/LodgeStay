@@ -1,37 +1,159 @@
-﻿@page "/owner-dashboard"
+@page "/owner-dashboard"
 @inject NavigationManager Navigation
 
 <div class="dashboard-container">
     <div class="dashboard-header">
         <h2>🏨 Owner Dashboard</h2>
-        <p class="welcome">Welcome back, Owner!</p>
+        <p class="welcome">Welcome back, Owner! Full access enabled.</p>
     </div>
 
+    <div class="section-title">Operations</div>
     <div class="cards-grid">
         <div class="dash-card" @onclick='() => Navigation.NavigateTo("/room-finder")'>
             <div class="card-icon">🔍</div>
             <h3>Room Finder</h3>
-            <p>Search available rooms</p>
+            <p>Search and book available rooms</p>
         </div>
         <div class="dash-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
             <div class="card-icon">📋</div>
             <h3>Reservations</h3>
-            <p>Manage all bookings</p>
+            <p>View and manage all bookings</p>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
-            <div class="card-icon">📅</div>
-            <h3>Export Calendar</h3>
-            <p>Export .ics schedule</p>
+        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/guest-profiles")'>
+            <div class="card-icon">👥</div>
+            <h3>Guest Profiles</h3>
+            <p>Manage guest information</p>
+        </div>
+        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/group-booking")'>
+            <div class="card-icon">👨‍👩‍👧‍👦</div>
+            <h3>Group Booking</h3>
+            <p>Create family and group bookings</p>
         </div>
     </div>
+
+    <div class="section-title">Management</div>
+    <div class="cards-grid">
+        <div class="dash-card accent-blue" @onclick='() => Navigation.NavigateTo("/loyalty-points")'>
+            <div class="card-icon">⭐</div>
+            <h3>Loyalty Points</h3>
+            <p>Award and redeem guest points</p>
+        </div>
+        <div class="dash-card accent-blue" @onclick='() => Navigation.NavigateTo("/reservations")'>
+            <div class="card-icon">📅</div>
+            <h3>Export Calendar</h3>
+            <p>Export bookings as .ics file</p>
+        </div>
+    </div>
+
+    <div class="section-title">Owner Only</div>
+    <div class="cards-grid">
+        <div class="dash-card accent-gold" @onclick="ShowStats">
+            <div class="card-icon">📊</div>
+            <h3>Occupancy Stats</h3>
+            <p>View revenue and occupancy rates</p>
+        </div>
+        <div class="dash-card accent-gold" @onclick="ShowEco">
+            <div class="card-icon">🌿</div>
+            <h3>EcoStay Program</h3>
+            <p>Track sustainability participation</p>
+        </div>
+    </div>
+
+    @if (showStats)
+    {
+        <div class="stats-panel">
+            <h3>📊 Quick Stats</h3>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Active Bookings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">Rs. 30,000</div>
+                    <div class="stat-label">Total Revenue</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">50%</div>
+                    <div class="stat-label">Occupancy Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Total Guests</div>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (showEco)
+    {
+        <div class="eco-panel">
+            <h3>🌿 EcoStay Program</h3>
+            <div class="stats-grid">
+                <div class="stat-card eco">
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Eco Participants</div>
+                </div>
+                <div class="stat-card eco">
+                    <div class="stat-value">450L</div>
+                    <div class="stat-label">Water Saved</div>
+                </div>
+                <div class="stat-card eco">
+                    <div class="stat-value">8</div>
+                    <div class="stat-label">Towel Reuses</div>
+                </div>
+                <div class="stat-card eco">
+                    <div class="stat-value">320</div>
+                    <div class="stat-label">Eco Points Awarded</div>
+                </div>
+            </div>
+        </div>
+    }
 </div>
 
+@code {
+    private bool showStats = false;
+    private bool showEco = false;
+
+    private void ShowStats() => showStats = !showStats;
+    private void ShowEco() => showEco = !showEco;
+}
+
 <style>
-    .dashboard-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
-    .dashboard-header { margin-bottom: 2rem; }
-    h2 { color: #2e7d32; }
-    .welcome { color: #888; font-size: 0.95rem; }
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.5rem; }
+    .dashboard-container {
+        padding: 2rem;
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+
+    .dashboard-header {
+        margin-bottom: 2rem;
+    }
+
+    h2 {
+        color: #2e7d32;
+    }
+
+    .welcome {
+        color: #888;
+        font-size: 0.95rem;
+    }
+
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #888;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 1.5rem 0 1rem;
+    }
+
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+
     .dash-card {
         background: white;
         padding: 2rem;
@@ -40,9 +162,80 @@
         text-align: center;
         cursor: pointer;
         transition: transform 0.2s;
+        border-top: 4px solid #2e7d32;
     }
-    .dash-card:hover { transform: translateY(-4px); }
-    .card-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-    h3 { color: #2e7d32; margin-bottom: 0.5rem; }
-    p { color: #888; font-size: 0.9rem; }
+
+        .dash-card.accent-blue {
+            border-top-color: #1565c0;
+        }
+
+        .dash-card.accent-gold {
+            border-top-color: #f9a825;
+        }
+
+        .dash-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+        }
+
+    .card-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+
+    h3 {
+        color: #2e7d32;
+        margin-bottom: 0.5rem;
+    }
+
+    .dash-card.accent-blue h3 {
+        color: #1565c0;
+    }
+
+    .dash-card.accent-gold h3 {
+        color: #f9a825;
+    }
+
+    p {
+        color: #888;
+        font-size: 0.9rem;
+    }
+
+    .stats-panel, .eco-panel {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        margin-top: 1.5rem;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-top: 1rem;
+    }
+
+    .stat-card {
+        background: #f9f9f9;
+        padding: 1.5rem;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+        .stat-card.eco {
+            background: #f1f8e9;
+        }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2e7d32;
+    }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #888;
+        margin-top: 4px;
+    }
 </style>
