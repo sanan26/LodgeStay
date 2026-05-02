@@ -1,0 +1,154 @@
+@* ═══════════════════════════════════════════════════════════════════
+   FILE 2: NotificationBanner.razor — Reusable in-app banner component
+   T-44: In-app notification banner for low occupancy / new booking alerts
+   Usage: <NotificationBanner /> — place in MainLayout.razor
+   ═══════════════════════════════════════════════════════════════════ *@
+
+@using LodgeStay.Services
+@using LodgeStay.Models
+@inject NotificationService NotificationService
+@implements IDisposable
+
+@if (visibleNotifications.Count > 0)
+{
+    <div class="notification-stack">
+        @foreach (var notif in visibleNotifications)
+        {
+            <div class="notif-banner @GetBannerClass(notif.Type) @(notif.IsExiting ? "exiting" : "")">
+                <div class="notif-banner-icon">@GetNotifIcon(notif.Type)</div>
+                <div class="notif-banner-body">
+                    <div class="notif-banner-title">@notif.Title</div>
+                    <div class="notif-banner-message">@notif.Message</div>
+                </div>
+                <button class="notif-dismiss" @onclick="() => Dismiss(notif)">✕</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<InAppNotification> visibleNotifications = new();
+
+    protected override void OnInitialized()
+    {
+        NotificationService.OnInAppNotification += HandleNotification;
+    }
+
+    private async void HandleNotification(InAppNotification notif)
+    {
+        await InvokeAsync(() =>
+        {
+            visibleNotifications.Insert(0, notif);
+            StateHasChanged();
+        });
+
+        // Auto-dismiss after 5 seconds
+        await Task.Delay(5000);
+        await InvokeAsync(() => DismissById(notif.Id));
+    }
+
+    private async Task Dismiss(InAppNotification notif)
+    {
+        notif.IsExiting = true;
+        StateHasChanged();
+        await Task.Delay(300);
+        DismissById(notif.Id);
+    }
+
+    private void DismissById(string id)
+    {
+        var notif = visibleNotifications.FirstOrDefault(n => n.Id == id);
+        if (notif != null) visibleNotifications.Remove(notif);
+        StateHasChanged();
+    }
+
+    private string GetBannerClass(string type) => type switch
+    {
+        "LowOccupancy" => "banner-warning",
+        "NewBooking"   => "banner-success",
+        "CheckIn"      => "banner-info",
+        "CheckOut"     => "banner-info",
+        _              => "banner-default"
+    };
+
+    private string GetNotifIcon(string type) => type switch
+    {
+        "LowOccupancy" => "⚠️",
+        "NewBooking"   => "📋",
+        "CheckIn"      => "✅",
+        "CheckOut"     => "🚪",
+        _              => "🔔"
+    };
+
+    public void Dispose()
+    {
+        NotificationService.OnInAppNotification -= HandleNotification;
+    }
+}
+
+<style>
+    .notification-stack {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        max-width: 360px;
+        width: 100%;
+    }
+
+    .notif-banner {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        padding: 0.9rem 1rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+        animation: slideIn 0.3s ease;
+        transition: opacity 0.3s, transform 0.3s;
+    }
+
+    .notif-banner.exiting {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+
+    .banner-warning { background: #fff3cd; border-left: 4px solid #ffc107; color: #6d4c00; }
+    .banner-success { background: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+    .banner-info    { background: #cce5ff; border-left: 4px solid #2e75b6; color: #003f7a; }
+    .banner-default { background: #f8f9fa; border-left: 4px solid #adb5bd; color: #333;    }
+
+    .notif-banner-icon    { font-size: 1.4rem; flex-shrink: 0; }
+    .notif-banner-body    { flex: 1; }
+    .notif-banner-title   { font-weight: 700; font-size: 0.875rem; margin-bottom: 2px; }
+    .notif-banner-message { font-size: 0.8rem; line-height: 1.4; }
+
+    .notif-dismiss {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 0.85rem;
+        color: inherit;
+        opacity: 0.6;
+        padding: 0;
+        flex-shrink: 0;
+    }
+    .notif-dismiss:hover { opacity: 1; }
+
+    @@keyframes slideIn {
+        from { opacity: 0; transform: translateX(30px); }
+        to   { opacity: 1; transform: translateX(0);    }
+    }
+
+    @@media (max-width: 480px) {
+        .notification-stack {
+            top: auto;
+            bottom: 1rem;
+            right: 0.75rem;
+            left: 0.75rem;
+            max-width: 100%;
+        }
+    }
+</style>
