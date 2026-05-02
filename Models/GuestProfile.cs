@@ -28,5 +28,6 @@ namespace LodgeStay.Models
         public string LoyaltyTier { get; set; } = "Bronze";
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public int EcoPoints { get; set; } = 0;
     }
 }

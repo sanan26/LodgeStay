@@ -23,6 +23,7 @@ namespace LodgeStay.Data
             await _database.CreateTableAsync<OtpVerification>();
             await _database.CreateTableAsync<GuestProfile>();
             await _database.CreateTableAsync<LoyaltyHistory>();
+            await _database.CreateTableAsync<EcoAction>();
 
             // Seed rooms if none exist
             var rooms = await _database.Table<Room>().ToListAsync();
@@ -210,6 +211,43 @@ namespace LodgeStay.Data
                 .Where(h => h.GuestId == guestId)
                 .OrderByDescending(h => h.CreatedAt)
                 .ToListAsync();
+        }
+
+        public async Task<int> InsertEcoActionAsync(EcoAction action)
+        {
+            action.RecordedAt = DateTime.Now;
+            return await _database.InsertAsync(action);
+        }
+
+        public async Task<EcoAction?> GetEcoActionAsync(int guestId, int reservationId, string actionType)
+        {
+            return await _database.Table<EcoAction>()
+                            .Where(e => e.GuestId == guestId
+                                     && e.ReservationId == reservationId
+                                     && e.ActionType == actionType)
+                            .FirstOrDefaultAsync();
+        }
+
+        public async Task<List<EcoAction>> GetEcoActionsByGuestAsync(int guestId)
+        {
+            return await _database.Table<EcoAction>()
+                            .Where(e => e.GuestId == guestId)
+                            .OrderByDescending(e => e.RecordedAt)
+                            .ToListAsync();
+        }
+
+        public async Task<List<EcoAction>> GetAllEcoActionsAsync()
+        {
+            return await _database.Table<EcoAction>()
+                            .OrderByDescending(e => e.RecordedAt)
+                            .ToListAsync();
+        }
+
+        public async Task<List<EcoAction>> GetEcoActionsByReservationAsync(int reservationId)
+        {
+            return await _database.Table<EcoAction>()
+                            .Where(e => e.ReservationId == reservationId)
+                            .ToListAsync();
         }
     }
 }
