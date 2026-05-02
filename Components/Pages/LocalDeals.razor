@@ -1,0 +1,386 @@
+@page "/localdeals"
+@using LodgeStay.Services
+@using LodgeStay.Models
+@inject DealService DealService
+@inject ReservationService ReservationService
+@inject SessionService SessionService
+
+<div class="page-container">
+
+    <div class="page-header">
+        <h2 class="page-title">🏪 Local Deals & Upsells</h2>
+        <p class="page-sub">Browse partner deals and attach them to a guest booking.</p>
+    </div>
+
+    <!-- Tab Bar -->
+    <div class="tab-bar">
+        <button class="tab-btn @(activeTab == "browse" ? "active" : "")" @onclick='() => activeTab = "browse"'>Browse Deals</button>
+        <button class="tab-btn @(activeTab == "attach" ? "active" : "")" @onclick='() => activeTab = "attach"'>Attach to Booking</button>
+        @if (isManager)
+        {
+            <button class="tab-btn @(activeTab == "manage" ? "active" : "")" @onclick='() => activeTab = "manage"'>Manage Deals</button>
+        }
+    </div>
+
+    <!-- ── TAB 1: Browse Deals ── -->
+    @if (activeTab == "browse")
+    {
+        @if (isLoading)
+        {
+            <div class="loading-row"><div class="spinner-sm"></div> Loading deals...</div>
+        }
+        else if (activeDeals.Count == 0)
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🏪</div>
+                <p>No active deals available at the moment.</p>
+            </div>
+        }
+        else
+        {
+            <div class="deals-grid">
+                @foreach (var deal in activeDeals)
+                {
+                    <div class="deal-card">
+                        <div class="deal-partner">@deal.PartnerName</div>
+                        <div class="deal-desc">@deal.Description</div>
+                        @if (deal.Price.HasValue)
+                        {
+                            <div class="deal-price">PKR @deal.Price.Value.ToString("N0")</div>
+                        }
+                        else
+                        {
+                            <div class="deal-price free">Complimentary</div>
+                        }
+                        <button class="btn btn-outline-primary btn-sm" @onclick='() => { activeTab = "attach"; preselectedDealId = deal.Id; }'>
+                            + Attach to Booking
+                        </button>
+                    </div>
+                }
+            </div>
+        }
+    }
+
+    <!-- ── TAB 2: Attach Deals to Booking ── -->
+    @if (activeTab == "attach")
+    {
+        <div class="card">
+            <div class="form-group">
+                <label>Booking Reference / Reservation ID</label>
+                <div class="input-row">
+                    <input type="number" class="form-control" @bind="attachReservationId" placeholder="Enter Reservation ID" />
+                    <button class="btn btn-primary" @onclick="LoadReservationForAttach">Load Booking</button>
+                </div>
+            </div>
+
+            @if (attachReservation != null)
+            {
+                <div class="booking-info-bar">
+                    <div>
+                        <strong>@attachReservation.GuestName</strong>
+                        <span class="muted-text"> · @attachReservation.BookingRef</span>
+                    </div>
+                    <div class="dates-badge">@attachReservation.CheckIn.ToString("dd MMM") → @attachReservation.CheckOut.ToString("dd MMM")</div>
+                </div>
+
+                <h4 class="sub-section-title">Select Deals to Attach <span class="muted-text">(max 3)</span></h4>
+
+                <div class="deals-select-list">
+                    @foreach (var deal in activeDeals)
+                    {
+                        var isAttached = attachedDealIds.Contains(deal.Id);
+                        var isPreselected = deal.Id == preselectedDealId;
+                        <div class="deal-select-row @(isAttached ? "selected" : "") @(isPreselected ? "preselected" : "")">
+                            <input type="checkbox"
+                                   checked="@isAttached"
+                                   disabled="@(!isAttached && attachedDealIds.Count >= 3)"
+                                   @onchange="e => ToggleDeal(deal.Id, (bool)e.Value!)" />
+                            <div class="deal-info">
+                                <span class="deal-partner">@deal.PartnerName</span>
+                                <span class="deal-desc-sm">@deal.Description</span>
+                            </div>
+                            @if (deal.Price.HasValue)
+                            {
+                                <span class="price-tag">PKR @deal.Price.Value.ToString("N0")</span>
+                            }
+                            else
+                            {
+                                <span class="price-tag free">Free</span>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="attach-footer">
+                    <span class="selected-count">@attachedDealIds.Count / 3 deals selected</span>
+                    <button class="btn btn-primary" @onclick="ConfirmAttach" disabled="@(attachedDealIds.Count == 0)">
+                        ✅ Confirm Attachment
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrEmpty(attachMessage))
+                {
+                    <div class="alert @(attachSuccess ? "alert-success" : "alert-danger")">@attachMessage</div>
+                }
+            }
+
+            <!-- Confirmation Display -->
+            @if (showConfirmation && confirmedDeals.Count > 0)
+            {
+                <div class="confirmation-panel">
+                    <h4>🎉 Deals attached to booking!</h4>
+                    <p class="muted-text">The following deals are now on <strong>@attachReservation?.GuestName</strong>'s confirmation:</p>
+                    @foreach (var deal in confirmedDeals)
+                    {
+                        <div class="confirmed-deal-row">
+                            <span>✅ @deal.PartnerName — @deal.Description</span>
+                            @if (deal.Price.HasValue)
+                            {
+                                <span class="price-tag">PKR @deal.Price.Value.ToString("N0")</span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    }
+
+    <!-- ── TAB 3: Manager — Manage Deals ── -->
+    @if (activeTab == "manage" && isManager)
+    {
+        <div class="card">
+            <h3 class="section-title">➕ Add New Deal</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Partner Name</label>
+                    <input type="text" class="form-control" @bind="newDeal.PartnerName" placeholder="e.g. Lahore Spice Restaurant" />
+                </div>
+                <div class="form-group">
+                    <label>Price (PKR) — leave blank for complimentary</label>
+                    <input type="number" class="form-control" @bind="newDealPrice" placeholder="Optional" />
+                </div>
+                <div class="form-group full-width">
+                    <label>Description</label>
+                    <textarea class="form-control textarea" @bind="newDeal.Description" rows="2"
+                              placeholder="Short description of the deal or offer..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button class="btn btn-primary" @onclick="AddDeal">+ Add Deal</button>
+            </div>
+            @if (!string.IsNullOrEmpty(managerMessage))
+            {
+                <div class="alert @(managerSuccess ? "alert-success" : "alert-danger")">@managerMessage</div>
+            }
+
+            <hr class="divider" />
+
+            <h3 class="section-title">All Deals</h3>
+            <div class="manage-table-wrapper">
+                <table class="manage-table">
+                    <thead>
+                        <tr>
+                            <th>Partner</th>
+                            <th>Description</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var deal in allDeals)
+                        {
+                            <tr class="@(deal.IsActive ? "" : "inactive-row")">
+                                <td>@deal.PartnerName</td>
+                                <td>@deal.Description</td>
+                                <td>@(deal.Price.HasValue ? $"PKR {deal.Price:N0}" : "Free")</td>
+                                <td><span class="status-pill @(deal.IsActive ? "active" : "inactive")">@(deal.IsActive ? "Active" : "Inactive")</span></td>
+                                <td>
+                                    <button class="btn btn-sm @(deal.IsActive ? "btn-outline-danger" : "btn-outline-success")"
+                                            @onclick="() => ToggleDealStatus(deal)">
+                                        @(deal.IsActive ? "Deactivate" : "Activate")
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string activeTab = "browse";
+    private bool isManager = false;
+    private bool isLoading = true;
+
+    private List<LocalDeal> activeDeals = new();
+    private List<LocalDeal> allDeals = new();
+
+    private int attachReservationId;
+    private int preselectedDealId = -1;
+    private Reservation? attachReservation;
+    private HashSet<int> attachedDealIds = new();
+    private List<LocalDeal> confirmedDeals = new();
+    private bool showConfirmation = false;
+    private string attachMessage = "";
+    private bool attachSuccess = false;
+
+    private LocalDeal newDeal = new();
+    private decimal? newDealPrice;
+    private string managerMessage = "";
+    private bool managerSuccess = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = SessionService.CurrentUser;
+        isManager = user != null && (user.Role == "Manager" || user.Role == "Owner");
+
+        activeDeals = await DealService.GetActiveDealsAsync();
+        if (isManager)
+            allDeals = await DealService.GetAllDealsAsync();
+
+        isLoading = false;
+    }
+
+    private async Task LoadReservationForAttach()
+    {
+        if (attachReservationId <= 0) return;
+        attachReservation = await ReservationService.GetReservationByIdAsync(attachReservationId);
+        attachedDealIds.Clear();
+        showConfirmation = false;
+        attachMessage = "";
+
+        if (preselectedDealId > 0)
+            attachedDealIds.Add(preselectedDealId);
+    }
+
+    private void ToggleDeal(int dealId, bool isChecked)
+    {
+        if (isChecked && attachedDealIds.Count < 3)
+            attachedDealIds.Add(dealId);
+        else
+            attachedDealIds.Remove(dealId);
+    }
+
+    private async Task ConfirmAttach()
+    {
+        attachMessage = "";
+        if (attachReservation == null || attachedDealIds.Count == 0) return;
+
+        await DealService.AttachDealsToReservationAsync(attachReservation.Id, attachedDealIds.ToList());
+        confirmedDeals = activeDeals.Where(d => attachedDealIds.Contains(d.Id)).ToList();
+        showConfirmation = true;
+        attachMessage = $"✅ {attachedDealIds.Count} deal(s) attached to booking {attachReservation.BookingRef}.";
+        attachSuccess = true;
+    }
+
+    private async Task AddDeal()
+    {
+        managerMessage = "";
+        if (string.IsNullOrWhiteSpace(newDeal.PartnerName) || string.IsNullOrWhiteSpace(newDeal.Description))
+        {
+            managerMessage = "Partner name and description are required.";
+            managerSuccess = false;
+            return;
+        }
+
+        newDeal.Price = newDealPrice;
+        newDeal.IsActive = true;
+        await DealService.AddDealAsync(newDeal);
+        managerMessage = "✅ Deal added successfully.";
+        managerSuccess = true;
+
+        allDeals = await DealService.GetAllDealsAsync();
+        activeDeals = await DealService.GetActiveDealsAsync();
+        newDeal = new();
+        newDealPrice = null;
+    }
+
+    private async Task ToggleDealStatus(LocalDeal deal)
+    {
+        deal.IsActive = !deal.IsActive;
+        await DealService.UpdateDealAsync(deal);
+        activeDeals = await DealService.GetActiveDealsAsync();
+    }
+}
+
+<style>
+    .page-container { padding: 1rem; max-width: 960px; margin: 0 auto; }
+    .page-header { margin-bottom: 1rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; margin: 0; }
+    .page-sub { color: #666; font-size: 0.875rem; margin: 4px 0 0; }
+
+    .tab-bar { display: flex; gap: 0.5rem; margin-bottom: 1.2rem; border-bottom: 2px solid #e0e0e0; }
+    .tab-btn { background: none; border: none; padding: 0.6rem 1.2rem; cursor: pointer; font-size: 0.9rem; color: #666; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab-btn.active { color: #2e75b6; border-bottom-color: #2e75b6; font-weight: 600; }
+
+    .deals-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem; }
+    .deal-card { background: #fff; border-radius: 12px; padding: 1.1rem 1.2rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); display: flex; flex-direction: column; gap: 0.4rem; border-top: 3px solid #2e75b6; }
+    .deal-partner { font-weight: 700; font-size: 1rem; color: #1a1a2e; }
+    .deal-desc { font-size: 0.85rem; color: #555; flex: 1; }
+    .deal-price { font-size: 1rem; font-weight: 600; color: #2e75b6; }
+    .deal-price.free { color: #28a745; }
+
+    .card { background: #fff; border-radius: 12px; padding: 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.07); }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-group label { font-size: 0.82rem; font-weight: 500; color: #555; }
+    .form-control { border: 1px solid #ddd; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+    .textarea { resize: vertical; }
+    .input-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .form-group.full-width { grid-column: 1 / -1; }
+
+    .booking-info-bar { display: flex; justify-content: space-between; align-items: center; background: #f0f4ff; border-radius: 8px; padding: 0.65rem 1rem; margin-bottom: 1rem; font-size: 0.875rem; }
+    .dates-badge { background: #2e75b6; color: white; padding: 3px 10px; border-radius: 8px; font-size: 0.78rem; }
+    .sub-section-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.75rem; }
+
+    .deals-select-list { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 1rem; }
+    .deal-select-row { display: flex; align-items: center; gap: 0.85rem; border: 1px solid #e0e0e0; border-radius: 10px; padding: 0.75rem 1rem; transition: background 0.15s; }
+    .deal-select-row.selected { background: #f0f4ff; border-color: #2e75b6; }
+    .deal-select-row.preselected { border-color: #28a745; }
+    .deal-info { flex: 1; display: flex; flex-direction: column; }
+    .deal-desc-sm { font-size: 0.76rem; color: #777; }
+    .price-tag { font-size: 0.85rem; font-weight: 600; color: #2e75b6; white-space: nowrap; }
+    .price-tag.free { color: #28a745; }
+
+    .attach-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem; }
+    .selected-count { font-size: 0.82rem; color: #666; }
+
+    .confirmation-panel { margin-top: 1.2rem; background: #f0fff4; border-radius: 10px; padding: 1rem 1.2rem; border: 1px solid #c3e6cb; }
+    .confirmation-panel h4 { margin: 0 0 0.5rem; font-size: 1rem; }
+    .confirmed-deal-row { display: flex; justify-content: space-between; font-size: 0.875rem; padding: 0.4rem 0; border-bottom: 1px solid #d4edda; }
+
+    .section-title { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-bottom: 0.75rem; }
+    .divider { border: none; border-top: 1px solid #e0e0e0; margin: 1.2rem 0; }
+    .form-actions { margin-top: 0.5rem; }
+
+    .manage-table-wrapper { overflow-x: auto; }
+    .manage-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .manage-table th { background: #f8f9fa; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; }
+    .manage-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #f0f0f0; }
+    .inactive-row { opacity: 0.55; }
+
+    .status-pill { font-size: 0.72rem; padding: 3px 9px; border-radius: 10px; font-weight: 600; }
+    .status-pill.active   { background: #d4edda; color: #155724; }
+    .status-pill.inactive { background: #f8d7da; color: #721c24; }
+
+    .btn { padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; transition: opacity 0.2s; }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
+    .btn-primary { background: #2e75b6; color: white; }
+    .btn-outline-primary { background: transparent; border: 1px solid #2e75b6; color: #2e75b6; }
+    .btn-outline-danger { background: transparent; border: 1px solid #dc3545; color: #dc3545; }
+    .btn-outline-success { background: transparent; border: 1px solid #28a745; color: #28a745; }
+    .alert { padding: 0.65rem 1rem; border-radius: 8px; margin-top: 0.75rem; font-size: 0.85rem; }
+    .alert-success { background: #d4edda; color: #155724; }
+    .alert-danger  { background: #f8d7da; color: #721c24; }
+
+    .loading-row { display: flex; align-items: center; gap: 0.5rem; color: #666; font-size: 0.875rem; padding: 1.5rem 0; }
+    .spinner-sm { width: 16px; height: 16px; border: 2px solid #e0e0e0; border-top-color: #2e75b6; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    .empty-state { text-align: center; padding: 3rem 1rem; color: #666; }
+    .empty-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .muted-text { color: #aaa; font-size: 0.82rem; }
+</style>
