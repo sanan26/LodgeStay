@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SQLite;
 using LodgeStay.Models;
 using System.Threading.Tasks;
@@ -10,7 +10,7 @@ namespace LodgeStay.Data
     {
         private readonly SQLiteAsyncConnection _database;
 
-        public DatabaseContext(string dbpath) 
+        public DatabaseContext(string dbpath)
         {
             _database = new SQLiteAsyncConnection(dbpath);
         }
@@ -22,6 +22,22 @@ namespace LodgeStay.Data
             await _database.CreateTableAsync<Reservation>();
             await _database.CreateTableAsync<OtpVerification>();
             await _database.CreateTableAsync<GuestProfile>();
+            await _database.CreateTableAsync<LoyaltyHistory>();
+
+            // Seed rooms if none exist
+            var rooms = await _database.Table<Room>().ToListAsync();
+            if (rooms.Count == 0)
+            {
+                await _database.InsertAllAsync(new List<Room>
+        {
+            new Room { RoomNo = "101", Room_Type = "Single", Capacity = 1, Price = 3000, Status = "Available", IsEcoCertified = true },
+            new Room { RoomNo = "102", Room_Type = "Double", Capacity = 2, Price = 5000, Status = "Available", IsEcoCertified = false },
+            new Room { RoomNo = "103", Room_Type = "Suite", Capacity = 3, Price = 9000, Status = "Available", IsEcoCertified = true },
+            new Room { RoomNo = "104", Room_Type = "Family", Capacity = 4, Price = 12000, Status = "Available", IsEcoCertified = false },
+            new Room { RoomNo = "105", Room_Type = "Double", Capacity = 2, Price = 5500, Status = "Available", IsEcoCertified = true },
+            new Room { RoomNo = "106", Room_Type = "Single", Capacity = 1, Price = 3500, Status = "Available", IsEcoCertified = false },
+        });
+            }
         }
 
         public async Task<User?> GetUserByEmailAsync(string email)
@@ -72,7 +88,7 @@ namespace LodgeStay.Data
                 .Where(o => o.User_Id == userid)
                 .OrderByDescending(o => o.CreatedAt)
                 .FirstOrDefaultAsync();
-        } 
+        }
 
         public async Task<User?> GetUserByIdAsync(int userId)
         {
@@ -94,11 +110,17 @@ namespace LodgeStay.Data
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<List<Reservation>> GetOverlappingReservationsAsync(DateTime checkin, DateTime checkout){
-            return await _database.Table<Reservation>()
-                .Where(r => r.CheckIn < checkout && r.CheckOut > checkin && r.Status == "Confirmed")
+        public async Task<List<Reservation>> GetOverlappingReservationsAsync(DateTime checkin, DateTime checkout)
+        {
+            var all = await _database.Table<Reservation>()
+                .Where(r => r.Status == "Confirmed")
                 .ToListAsync();
-        }  
+
+            return all.Where(r =>
+                r.CheckIn.Date < checkout.Date &&
+                r.CheckOut.Date > checkin.Date
+            ).ToList();
+        }
 
         public async Task<int> SaveReservationAsync(Reservation reservation)
         {
@@ -165,6 +187,29 @@ namespace LodgeStay.Data
             return all.Where(g => g.Name.Contains(query) || g.Email.Contains(query))
                       .ToList();
         }
+        public async Task<Reservation?> GetReservationByReferenceAsync(string reference)
+        {
+            return await _database.Table<Reservation>()
+                .Where(r => r.BookingReference == reference)
+                .FirstOrDefaultAsync();
+        }
 
+        public async Task<List<GuestProfile>> GetAllGuestsAsync()
+        {
+            return await _database.Table<GuestProfile>().ToListAsync();
+        }
+
+        public async Task<int> InsertLoyaltyHistoryAsync(LoyaltyHistory entry)
+        {
+            return await _database.InsertAsync(entry);
+        }
+
+        public async Task<List<LoyaltyHistory>> GetLoyaltyHistoryByGuestAsync(int guestId)
+        {
+            return await _database.Table<LoyaltyHistory>()
+                .Where(h => h.GuestId == guestId)
+                .OrderByDescending(h => h.CreatedAt)
+                .ToListAsync();
+        }
     }
 }
