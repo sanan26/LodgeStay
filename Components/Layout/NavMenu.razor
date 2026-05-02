@@ -1,3 +1,7 @@
+@using LodgeStay.Services
+@inject NavigationManager Navigation
+@inject SessionService SessionService
+
 <div class="top-row ps-3 navbar navbar-dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="">🏨 LodgeStay</a>
@@ -6,23 +10,67 @@
 
 <div class="nav-scrollable">
     <nav class="nav flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="login">🔐 Login</NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="room-finder">🔍 Room Finder</NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="reservations">📋 Reservations</NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="guest-profiles">👥 Guest Profiles</NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="group-booking">👨‍👩‍👧‍👦 Group Booking</NavLink>
-        </div>
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="loyalty-points">⭐ Loyalty Points</NavLink>
-        </div>
+
+        @if (SessionService.IsloggedIn)
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="room-finder">🔍 Room Finder</NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="reservations">📋 Reservations</NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="guest-profiles">👥 Guest Profiles</NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="group-booking">👨‍👩‍👧‍👦 Group Booking</NavLink>
+            </div>
+            @if (SessionService.IsManager || SessionService.IsOwner)
+            {
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="loyalty-points">⭐ Loyalty Points</NavLink>
+                </div>
+            }
+            <div class="nav-item px-3">
+                <button class="nav-link logout-btn" @onclick="Logout">🚪 Logout</button>
+            </div>
+        }
+        else
+        {
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="login">🔐 Login</NavLink>
+            </div>
+        }
+
     </nav>
 </div>
+
+@code {
+    private void Logout()
+    {
+        SessionService.Logout();
+        Navigation.NavigateTo("/login");
+    }
+}
+
+<style>
+    .logout-btn {
+        background: none;
+        border: none;
+        color: #d7d7d7;
+        cursor: pointer;
+        width: 100%;
+        text-align: left;
+        padding: 0 1rem;
+        font-size: 0.9rem;
+        height: 3rem;
+        display: flex;
+        align-items: center;
+        border-radius: 4px;
+    }
+
+        .logout-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+            color: white;
+        }
+</style>
