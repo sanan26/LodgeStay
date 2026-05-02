@@ -24,20 +24,34 @@ namespace LodgeStay.Data
             await _database.CreateTableAsync<GuestProfile>();
             await _database.CreateTableAsync<LoyaltyHistory>();
             await _database.CreateTableAsync<EcoAction>();
+            await _database.CreateTableAsync<LocalDeal>();
 
             // Seed rooms if none exist
             var rooms = await _database.Table<Room>().ToListAsync();
             if (rooms.Count == 0)
             {
                 await _database.InsertAllAsync(new List<Room>
-        {
-            new Room { RoomNo = "101", Room_Type = "Single", Capacity = 1, Price = 3000, Status = "Available", IsEcoCertified = true },
-            new Room { RoomNo = "102", Room_Type = "Double", Capacity = 2, Price = 5000, Status = "Available", IsEcoCertified = false },
-            new Room { RoomNo = "103", Room_Type = "Suite", Capacity = 3, Price = 9000, Status = "Available", IsEcoCertified = true },
-            new Room { RoomNo = "104", Room_Type = "Family", Capacity = 4, Price = 12000, Status = "Available", IsEcoCertified = false },
-            new Room { RoomNo = "105", Room_Type = "Double", Capacity = 2, Price = 5500, Status = "Available", IsEcoCertified = true },
-            new Room { RoomNo = "106", Room_Type = "Single", Capacity = 1, Price = 3500, Status = "Available", IsEcoCertified = false },
-        });
+                {
+                    new Room { RoomNo = "101", Room_Type = "Single", Capacity = 1, Price = 3000, Status = "Available", IsEcoCertified = true },
+                    new Room { RoomNo = "102", Room_Type = "Double", Capacity = 2, Price = 5000, Status = "Available", IsEcoCertified = false },
+                    new Room { RoomNo = "103", Room_Type = "Suite", Capacity = 3, Price = 9000, Status = "Available", IsEcoCertified = true },
+                    new Room { RoomNo = "104", Room_Type = "Family", Capacity = 4, Price = 12000, Status = "Available", IsEcoCertified = false },
+                    new Room { RoomNo = "105", Room_Type = "Double", Capacity = 2, Price = 5500, Status = "Available", IsEcoCertified = true },
+                    new Room { RoomNo = "106", Room_Type = "Single", Capacity = 1, Price = 3500, Status = "Available", IsEcoCertified = false },
+                });
+            }
+
+            var deals = await _database.Table<LocalDeal>().ToListAsync();
+            if (deals.Count == 0)
+            {
+                await _database.InsertAllAsync(new List<LocalDeal>
+                {
+                    new LocalDeal { PartnerName = "Lahore Food Street",  Description = "10% off dinner for lodge guests", Price = 0,    IsActive = true },
+                    new LocalDeal { PartnerName = "City Tour Services",  Description = "Half-day city tour PKR 1500/person", Price = 1500, IsActive = true },
+                    new LocalDeal { PartnerName = "Badshahi Mosque Tour",Description = "Guided heritage tour PKR 500/person", Price = 500,  IsActive = true },
+                    new LocalDeal { PartnerName = "Airport Transfers",   Description = "One-way airport drop PKR 800",        Price = 800,  IsActive = true },
+                    new LocalDeal { PartnerName = "Spa & Wellness",      Description = "60-min massage PKR 2000/person",      Price = 2000, IsActive = true },
+                });
             }
         }
 
@@ -248,6 +262,35 @@ namespace LodgeStay.Data
             return await _database.Table<EcoAction>()
                             .Where(e => e.ReservationId == reservationId)
                             .ToListAsync();
+        }
+
+        public async Task<List<LocalDeal>> GetActiveDealsAsync()
+        {
+            return await _database.Table<LocalDeal>()
+                            .Where(d => d.IsActive == true)
+                            .ToListAsync();
+        }
+
+        public async Task<List<LocalDeal>> GetAllDealsAsync()
+        {
+            return await _database.Table<LocalDeal>().ToListAsync();
+        }
+
+        public async Task<LocalDeal?> GetDealByIdAsync(int id)
+        {
+            return await _database.Table<LocalDeal>()
+                            .Where(d => d.Id == id)
+                            .FirstOrDefaultAsync();
+        }
+
+        public async Task<int> InsertDealAsync(LocalDeal deal)
+        {
+            return await _database.InsertAsync(deal);
+        }
+
+        public async Task<int> UpdateDealAsync(LocalDeal deal)
+        {
+            return await _database.UpdateAsync(deal);
         }
     }
 }
