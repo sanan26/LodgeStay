@@ -25,6 +25,7 @@ namespace LodgeStay.Data
             await _database.CreateTableAsync<LoyaltyHistory>();
             await _database.CreateTableAsync<EcoAction>();
             await _database.CreateTableAsync<LocalDeal>();
+            await _database.CreateTableAsync<ConciergeRule>();
 
             // Seed rooms if none exist
             var rooms = await _database.Table<Room>().ToListAsync();
@@ -53,7 +54,78 @@ namespace LodgeStay.Data
                     new LocalDeal { PartnerName = "Spa & Wellness",      Description = "60-min massage PKR 2000/person",      Price = 2000, IsActive = true },
                 });
             }
-        }
+
+            var rules = await _database.Table<ConciergeRule>().ToListAsync();
+            if (rules.Count == 0)
+            {
+                await _database.InsertAllAsync(new List<ConciergeRule>
+                {
+                    new ConciergeRule
+                    {
+                        Keywords         = "checkin,check in,arrival,arrive",
+                        Category         = ConciergeCategories.CheckIn,
+                        ResponseText     = "Check-in time is 2:00 PM. Early check-in available on request subject to availability.",
+                        ResponseTemplate = "Dear Guest, your check-in time is 2:00 PM. Please contact us if you require early check-in.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "checkout,check out,departure,leave",
+                        Category         = ConciergeCategories.CheckOut,
+                        ResponseText     = "Check-out time is 11:00 AM. Late check-out until 2:00 PM available for PKR 500.",
+                        ResponseTemplate = "Dear Guest, check-out is at 11:00 AM. Late check-out until 2:00 PM is available for PKR 500.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "cancel,cancellation,refund",
+                        Category         = ConciergeCategories.Cancellation,
+                        ResponseText     = "Free cancellation up to 24 hours before check-in. After that a one-night charge applies.",
+                        ResponseTemplate = "Dear Guest, cancellations made 24+ hours before check-in are fully refunded. Late cancellations incur a one-night charge.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "room,single,double,suite,family,types",
+                        Category         = ConciergeCategories.RoomTypes,
+                        ResponseText     = "We offer Single (PKR 3000), Double (PKR 5000), Suite (PKR 9000), and Family rooms (PKR 12000).",
+                        ResponseTemplate = "Dear Guest, our room options are: Single PKR 3000, Double PKR 5000, Suite PKR 9000, Family PKR 12000 per night.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "breakfast,food,meal,dining",
+                        Category         = ConciergeCategories.Breakfast,
+                        ResponseText     = "Breakfast is served from 7:00 AM to 10:00 AM in the dining area. Continental and Pakistani options available.",
+                        ResponseTemplate = "Dear Guest, breakfast is served 7:00–10:00 AM with continental and Pakistani options.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "wifi,wi-fi,internet,password,network",
+                        Category         = ConciergeCategories.WiFi,
+                        ResponseText     = "Free Wi-Fi is available throughout the property. Network: LodgeStay_Guest. Ask reception for the password.",
+                        ResponseTemplate = "Dear Guest, free Wi-Fi is available lodge-wide. Network: LodgeStay_Guest. Please ask reception for the password.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "price,cost,rate,how much,charges",
+                        Category         = ConciergeCategories.Pricing,
+                        ResponseText     = "Room rates start from PKR 3000/night. Group discounts and loyalty redemptions available.",
+                        ResponseTemplate = "Dear Guest, our rates start from PKR 3000/night. Group discounts and loyalty points redemption are available.",
+                        IsActive         = true
+                    },
+                    new ConciergeRule
+                    {
+                        Keywords         = "parking,car,vehicle",
+                        Category         = ConciergeCategories.General,
+                        ResponseText     = "Free parking is available on premises for all guests.",
+                        ResponseTemplate = "Dear Guest, free parking is available on premises.",
+                        IsActive         = true
+                    },
+    });
+            }
 
         public async Task<User?> GetUserByEmailAsync(string email)
         {
@@ -291,6 +363,37 @@ namespace LodgeStay.Data
         public async Task<int> UpdateDealAsync(LocalDeal deal)
         {
             return await _database.UpdateAsync(deal);
+        }
+
+        public async Task<List<ConciergeRule>> GetAllConciergeRulesAsync()
+        {
+            return await _database.Table<ConciergeRule>()
+                            .Where(r => r.IsActive == true)
+                            .ToListAsync();
+        }
+
+        public async Task<List<ConciergeRule>> GetConciergeRulesByCategoryAsync(string category)
+        {
+            return await _database.Table<ConciergeRule>()
+                            .Where(r => r.Category == category && r.IsActive == true)
+                            .ToListAsync();
+        }
+
+        public async Task<int> InsertConciergeRuleAsync(ConciergeRule rule)
+        {
+            return await _database.InsertAsync(rule);
+        }
+
+        public async Task<int> UpdateConciergeRuleAsync(ConciergeRule rule)
+        {
+            return await _database.UpdateAsync(rule);
+        }
+
+        public async Task<ConciergeRule?> GetConciergeRuleByIdAsync(int id)
+        {
+            return await _database.Table<ConciergeRule>()
+                            .Where(r => r.Id == id)
+                            .FirstOrDefaultAsync();
         }
     }
 }

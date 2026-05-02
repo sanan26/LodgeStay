@@ -50,6 +50,7 @@ public static class MauiProgram
         builder.Services.AddSingleton<ReportService>();
         builder.Services.AddSingleton<NotificationService>();
         builder.Services.AddSingleton<DealService>();
+        builder.Services.AddSingleton<ConciergeService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
