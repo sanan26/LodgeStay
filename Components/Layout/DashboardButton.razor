@@ -1,7 +1,10 @@
-﻿@inject NavigationManager Navigation
+@inject NavigationManager Navigation
 @inject SessionService SessionService
 
-<button class="btn-dashboard" @onclick="GoToDashboard">🏠 Dashboard</button>
+<button class="btn-dashboard" @onclick="GoToDashboard">
+    <span class="dash-icon">⌂</span>
+    <span class="dash-text">Dashboard</span>
+</button>
 
 @code {
     private void GoToDashboard()
@@ -18,16 +21,38 @@
 
 <style>
     .btn-dashboard {
-        padding: 8px 16px;
-        background: brown;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        background: linear-gradient(135deg, #2e7d32, #1b5e20);
         color: white;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         cursor: pointer;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(46,125,50,0.3);
+        transition: all 0.2s;
+        letter-spacing: 0.3px;
     }
 
         .btn-dashboard:hover {
-            background: maroon;
+            background: linear-gradient(135deg, #1b5e20, #0a3d0a);
+            box-shadow: 0 4px 12px rgba(46,125,50,0.4);
+            transform: translateY(-1px);
         }
+
+        .btn-dashboard:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(46,125,50,0.3);
+        }
+
+    .dash-icon {
+        font-size: 1rem;
+    }
+
+    .dash-text {
+        font-size: 0.9rem;
+    }
 </style>
