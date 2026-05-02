@@ -1,42 +1,42 @@
-﻿using System;
-using LodgeStay.Data;
 using LodgeStay.Models;
+using LodgeStay.Data;
 using System.Threading.Tasks;
 
 namespace LodgeStay.Services
 {
     public class PreferenceService
     {
-        private readonly DatabaseContext _database;
+        private readonly DatabaseContext _db;
 
-        public PreferenceService(DatabaseContext database)
+        public PreferenceService(DatabaseContext db)
         {
-            _database = database;
+            _db = db;
+        }
+
+        public async Task<bool> SavePreferencesAsync(
+            int guestId,
+            string preferredRoomType,
+            string preferredBedType,
+            string preferredFloor,
+            string dietaryNotes,
+            string amenityNotes)
+        {
+            var guest = await _db.GetGuestByIdAsync(guestId);
+            if (guest == null) return false;
+
+            guest.PreferredRoomType = preferredRoomType;
+            guest.PreferredBedType = preferredBedType;
+            guest.PreferredFloor = preferredFloor;
+            guest.DietaryNotes = dietaryNotes;
+            guest.AmenityNotes = amenityNotes;
+
+            await _db.UpdateGuestAsync(guest);
+            return true;
         }
 
         public async Task<GuestProfile?> GetPreferencesAsync(string email)
         {
-            return await _database.GetGuestByEmailAsync(email);
+            return await _db.GetGuestByEmailAsync(email);
         }
-
-        public async Task<bool> SavePreferencesAsync(string email, string roomType, string floor, string bedType, string dietary, string amenity)
-        {
-            var existingperference = await _database.GetGuestByEmailAsync(email);
-            if (existingperference == null)
-            {
-                return false;
-            }
-            else
-            {
-                existingperference.PreferredBedType = bedType;
-                existingperference.PreferredFloor = floor;
-                existingperference.PreferredRoomType = roomType;
-                existingperference.DietaryPreferences = dietary;
-                existingperference.AmenityPreferences = amenity;
-                await _database.UpdateGuestAsync(existingperference);
-                return true;
-            }
-        }
-
     }
 }
