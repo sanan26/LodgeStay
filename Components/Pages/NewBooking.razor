@@ -1,4 +1,4 @@
-﻿@page "/new-booking/{RoomId:int}"
+@page "/new-booking/{RoomId:int}"
 @using LodgeStay.Models
 @using LodgeStay.Services
 @inject NavigationManager Navigation
@@ -29,16 +29,20 @@
         <h3>Booking Details</h3>
         <div class="form-group">
             <label>Check-in Date</label>
-            <input type="date" @bind="checkIn" @bind:format="yyyy-MM-dd" />
+            <input type="date"
+                   value="@checkIn.ToString("yyyy-MM-dd")"
+                   min="@DateTime.Now.ToString("yyyy-MM-dd")"
+                   @onchange="OnCheckInChanged" />
         </div>
         <div class="form-group">
             <label>Check-out Date</label>
-            <input type="date" @bind="checkOut" @bind:format="yyyy-MM-dd" />
+            <input type="date"
+                   @bind="checkOut"
+                   @bind:format="yyyy-MM-dd"
+                   min="@checkIn.AddDays(1).ToString("yyyy-MM-dd")" />
         </div>
-        <div class="form-group">
-            <label>Number of Guests</label>
-            <input type="number" @bind="numberOfGuests" min="1" max="10" />
-        </div>
+
+       
 
         <div class="room-summary">
             <h3>Selected Room</h3>
@@ -53,8 +57,10 @@
         }
 
         <div class="form-actions">
-            <button class="btn-cancel" @onclick="GoBack">Cancel</button>
-            <button class="btn-confirm" @onclick="ConfirmBooking">Confirm Booking</button>
+            <button class="btn-cancel" @onclick="GoBack" disabled="@isSaving">Cancel</button>
+            <button class="btn-confirm" @onclick="ConfirmBooking" disabled="@isSaving">
+                @(isSaving ? "Saving..." : "Confirm Booking")
+            </button>
         </div>
     </div>
 </div>
@@ -67,7 +73,6 @@
     private string guestPhone = "";
     private DateTime checkIn = DateTime.Now;
     private DateTime checkOut = DateTime.Now.AddDays(1);
-    private int numberOfGuests = 1;
     private string errorMessage = "";
     private bool isSaving = false;
 
@@ -92,10 +97,21 @@
             return;
         }
 
-        // Create the reservation
+        isSaving = true;
+        errorMessage = "";
+
+        // Check availability BEFORE creating reservation
+        var isAvailable = await ReservationService.IsRoomAvailableAsync(RoomId, checkIn, checkOut);
+        if (!isAvailable)
+        {
+            errorMessage = "This room is already booked for the selected dates.";
+            isSaving = false;
+            return;
+        }
+
+        // Let SQLite auto-assign Reservation_ID
         var reservation = new Reservation
             {
-                Reservation_ID = new Random().Next(1000, 9999),
                 BookingReference = "LS-" + DateTime.Now.ToString("yyyyMMddHHmmss"),
                 GuestName = guestName,
                 GuestEmail = guestEmail,
@@ -103,23 +119,15 @@
                 Room_ID = RoomId,
                 CheckIn = checkIn,
                 CheckOut = checkOut,
-                NumberOfGuests = numberOfGuests,
+                NumberOfGuests = 1,
                 TotalPrice = totalPrice,
-                Status = "Confirmed"
+                Status = "Confirmed",
+                Created_at = DateTime.UtcNow
             };
 
-        // Check for double booking
-        var isAvailable = await ReservationService.IsRoomAvailableAsync(RoomId, checkIn, checkOut);
-        if (!isAvailable)
-        {
-            errorMessage = "This room is already booked for the selected dates. Please choose different dates or another room.";
-            isSaving = false;
-            return;
-        }
-        // Save to the service
         await ReservationService.AddReservationAsync(reservation);
+        isSaving = false;
 
-        // Navigate to confirmation page with booking details
         Navigation.NavigateTo("/booking-confirmation/" + reservation.BookingReference +
             "?guest=" + Uri.EscapeDataString(guestName) +
             "&room=" + RoomId +
@@ -127,10 +135,22 @@
             "&checkout=" + checkOut.ToString("yyyy-MM-dd") +
             "&total=" + totalPrice);
     }
+
+    private void OnCheckInChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var newCheckIn))
+        {
+            checkIn = newCheckIn;
+            // Auto push checkout if it's before or same as checkin
+            if (checkOut <= checkIn)
+            {
+                checkOut = checkIn.AddDays(1);
+            }
+        }
+    }
 }
 
 <style>
-    /* Your existing styles remain the same */
     .booking-container {
         padding: 2rem;
         max-width: 600px;
