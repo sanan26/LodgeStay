@@ -1,0 +1,195 @@
+@* ═══════════════════════════════════════════════════════════
+   FILE 1: NotificationSettings.razor — /notifications/settings
+   T-44: Settings toggle screen for notification categories
+   ═══════════════════════════════════════════════════════════ *@
+
+@page "/notifications/settings"
+@using LodgeStay.Services
+@using LodgeStay.Models
+@inject NotificationService NotificationService
+@inject SessionService SessionService
+
+<div class="page-container">
+
+    <div class="page-header">
+        <h2 class="page-title">🔔 Notification Settings</h2>
+        <p class="page-sub">Choose which notifications you want to receive.</p>
+    </div>
+
+    <div class="card">
+        <h3 class="section-title">Push Notifications</h3>
+        <p class="section-desc">Delivered to your mobile device or browser when the app is in the background.</p>
+
+        <div class="notif-list">
+
+            <div class="notif-row">
+                <div class="notif-info">
+                    <div class="notif-icon">📋</div>
+                    <div class="notif-text">
+                        <div class="notif-name">New Booking Alert</div>
+                        <div class="notif-desc">Receive a notification whenever a new reservation is created.</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" @bind="prefs.NewBooking" @bind:after="SavePrefs" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="notif-row">
+                <div class="notif-info">
+                    <div class="notif-icon">✅</div>
+                    <div class="notif-text">
+                        <div class="notif-name">Check-In Reminder</div>
+                        <div class="notif-desc">Daily 6:00 AM alert listing all guests checking in today.</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" @bind="prefs.CheckInReminder" @bind:after="SavePrefs" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="notif-row">
+                <div class="notif-info">
+                    <div class="notif-icon">🚪</div>
+                    <div class="notif-text">
+                        <div class="notif-name">Check-Out Reminder</div>
+                        <div class="notif-desc">Daily 10:00 AM alert listing all guests checking out today.</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" @bind="prefs.CheckOutReminder" @bind:after="SavePrefs" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+            <div class="notif-row">
+                <div class="notif-info">
+                    <div class="notif-icon">⚠️</div>
+                    <div class="notif-text">
+                        <div class="notif-name">Low Occupancy Alert</div>
+                        <div class="notif-desc">Alert when occupancy drops below 30%. Fires within 30 seconds of threshold breach.</div>
+                    </div>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" @bind="prefs.LowOccupancy" @bind:after="SavePrefs" />
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Web Push Permission -->
+    <div class="card permission-card">
+        <h3 class="section-title">Browser Notification Permission</h3>
+        <p class="section-desc">For web (PWA) notifications, your browser must grant permission.</p>
+        <div class="permission-row">
+            <div class="permission-status @permissionStatusClass">
+                @permissionIcon @permissionLabel
+            </div>
+            @if (permissionLabel != "Granted")
+            {
+                <button class="btn btn-primary" @onclick="RequestBrowserPermission">Request Permission</button>
+            }
+        </div>
+    </div>
+
+    @if (saved)
+    {
+        <div class="save-toast">✅ Preferences saved</div>
+    }
+</div>
+
+@code {
+    private NotificationPreferences prefs = new();
+    private bool saved = false;
+
+    private string permissionLabel = "Unknown";
+    private string permissionStatusClass = "status-unknown";
+    private string permissionIcon = "❓";
+
+    protected override async Task OnInitializedAsync()
+    {
+        prefs = await NotificationService.GetPreferencesAsync(SessionService.CurrentUser?.Id ?? 0);
+        await CheckBrowserPermission();
+    }
+
+    private async Task SavePrefs()
+    {
+        await NotificationService.SavePreferencesAsync(SessionService.CurrentUser?.Id ?? 0, prefs);
+        saved = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        saved = false;
+        StateHasChanged();
+    }
+
+    private async Task CheckBrowserPermission()
+    {
+        // In a real MAUI Blazor Hybrid app this runs only in web/PWA context
+        try
+        {
+            permissionLabel = await NotificationService.GetBrowserPermissionStatusAsync();
+            (permissionIcon, permissionStatusClass) = permissionLabel switch
+            {
+                "Granted"  => ("✅", "status-granted"),
+                "Denied"   => ("❌", "status-denied"),
+                _          => ("❓", "status-unknown")
+            };
+        }
+        catch
+        {
+            permissionLabel = "Not available (mobile app)";
+            permissionIcon = "📱";
+            permissionStatusClass = "status-unknown";
+        }
+    }
+
+    private async Task RequestBrowserPermission()
+    {
+        await NotificationService.RequestBrowserPermissionAsync();
+        await CheckBrowserPermission();
+    }
+}
+
+<style>
+    .page-container { padding: 1rem; max-width: 760px; margin: 0 auto; }
+    .page-header { margin-bottom: 1rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; margin: 0; }
+    .page-sub { color: #666; font-size: 0.875rem; margin: 4px 0 0; }
+
+    .card { background: #fff; border-radius: 12px; padding: 1.3rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 1rem; }
+    .section-title { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-bottom: 0.3rem; }
+    .section-desc { font-size: 0.82rem; color: #888; margin-bottom: 1rem; }
+
+    .notif-list { display: flex; flex-direction: column; }
+    .notif-row { display: flex; align-items: center; justify-content: space-between; padding: 0.9rem 0; border-bottom: 1px solid #f0f0f0; }
+    .notif-row:last-child { border-bottom: none; }
+    .notif-info { display: flex; align-items: center; gap: 0.85rem; flex: 1; }
+    .notif-icon { font-size: 1.5rem; }
+    .notif-name { font-weight: 600; font-size: 0.9rem; }
+    .notif-desc { font-size: 0.78rem; color: #777; margin-top: 2px; }
+
+    /* Toggle Switch */
+    .toggle-switch { position: relative; display: inline-block; width: 46px; height: 26px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; cursor: pointer; inset: 0; background: #ddd; border-radius: 26px; transition: 0.3s; }
+    .toggle-slider::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.3s; }
+    input:checked + .toggle-slider { background: #2e75b6; }
+    input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    .permission-card { }
+    .permission-row { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+    .permission-status { font-size: 0.875rem; font-weight: 600; padding: 5px 14px; border-radius: 10px; }
+    .status-granted { background: #d4edda; color: #155724; }
+    .status-denied  { background: #f8d7da; color: #721c24; }
+    .status-unknown { background: #fff3cd; color: #856404; }
+
+    .btn { padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
+    .btn-primary { background: #2e75b6; color: white; }
+
+    .save-toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #28a745; color: white; padding: 0.6rem 1.4rem; border-radius: 20px; font-size: 0.875rem; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.2); animation: fadeInUp 0.3s ease; z-index: 1000; }
+    @@keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+</style>
