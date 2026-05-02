@@ -1,0 +1,344 @@
+@page "/reports"
+@using LodgeStay.Services
+@using LodgeStay.Models
+@inject ReportService ReportService
+@inject SessionService SessionService
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<div class="page-container">
+
+    <div class="page-header">
+        <h2 class="page-title">📄 PDF Reports</h2>
+        <p class="page-sub">Generate and share occupancy, revenue, loyalty, and eco-impact reports.</p>
+    </div>
+
+    @if (!isAuthorized)
+    {
+        <div class="alert alert-warning">You must be logged in as Manager or Owner to generate reports.</div>
+    }
+    else
+    {
+        <!-- Report Type Selector -->
+        <div class="card">
+            <h3 class="section-title">1. Select Report Type</h3>
+            <div class="report-type-grid">
+                @foreach (var type in reportTypes)
+                {
+                    <button class="report-type-card @(selectedType == type.Key ? "selected" : "")"
+                            @onclick="() => selectedType = type.Key">
+                        <div class="rt-icon">@type.Icon</div>
+                        <div class="rt-name">@type.Name</div>
+                        <div class="rt-desc">@type.Description</div>
+                    </button>
+                }
+            </div>
+        </div>
+
+        <!-- Date Range -->
+        <div class="card">
+            <h3 class="section-title">2. Select Date Range</h3>
+            <div class="date-row">
+                <div class="form-group">
+                    <label>From</label>
+                    <input type="date" class="form-control" @bind="startDate" max="@endDate.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="date-arrow">→</div>
+                <div class="form-group">
+                    <label>To</label>
+                    <input type="date" class="form-control" @bind="endDate" min="@startDate.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                </div>
+            </div>
+
+            <div class="quick-range-btns">
+                <button class="quick-btn" @onclick='() => SetRange(7)'>Last 7 days</button>
+                <button class="quick-btn" @onclick='() => SetRange(30)'>Last 30 days</button>
+                <button class="quick-btn" @onclick='() => SetRange(90)'>Last 90 days</button>
+                <button class="quick-btn" @onclick="SetThisMonth">This Month</button>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <div class="card generate-card">
+            <h3 class="section-title">3. Generate Report</h3>
+
+            <div class="generate-summary">
+                <span class="summary-chip">📋 @(reportTypes.FirstOrDefault(r => r.Key == selectedType)?.Name ?? "—")</span>
+                <span class="summary-chip">📅 @startDate.ToString("dd MMM yyyy") → @endDate.ToString("dd MMM yyyy")</span>
+                <span class="summary-chip">⏱ @((endDate - startDate).Days + 1) days</span>
+            </div>
+
+            <button class="btn btn-generate" @onclick="GenerateReport" disabled="@isGenerating">
+                @if (isGenerating)
+                {
+                    <span class="btn-spinner"></span>
+                    <span>Generating...</span>
+                }
+                else
+                {
+                    <span>📄 Generate PDF</span>
+                }
+            </button>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger">@errorMessage</div>
+            }
+        </div>
+
+        <!-- Download / Share Result -->
+        @if (pdfReady)
+        {
+            <div class="card result-card">
+                <div class="result-header">
+                    <div class="result-icon">✅</div>
+                    <div>
+                        <div class="result-title">Report Ready</div>
+                        <div class="result-filename">@generatedFileName</div>
+                    </div>
+                </div>
+
+                <div class="share-actions">
+                    <!-- Web: download button using JS interop -->
+                    <button class="btn btn-download" @onclick="DownloadPdf">
+                        ⬇️ Download PDF
+                    </button>
+
+                    <!-- Mobile: share sheet (rendered in MAUI context) -->
+                    @if (isMaui)
+                    {
+                        <button class="btn btn-share" @onclick="SharePdf">
+                            📤 Share via...
+                        </button>
+                    }
+                </div>
+
+                <div class="report-meta">
+                    <span>Generated: @DateTime.Now.ToString("dd MMM yyyy, HH:mm")</span>
+                    <span>Size: ~@estimatedSizeKb KB</span>
+                </div>
+            </div>
+        }
+
+        <!-- Report History -->
+        @if (recentReports.Count > 0)
+        {
+            <div class="card">
+                <h3 class="section-title">Recent Reports</h3>
+                <div class="history-list">
+                    @foreach (var report in recentReports)
+                    {
+                        <div class="history-row">
+                            <span class="history-icon">@GetTypeIcon(report.Type)</span>
+                            <div class="history-info">
+                                <div class="history-name">@report.FileName</div>
+                                <div class="history-date">@report.GeneratedAt.ToString("dd MMM yyyy, HH:mm")</div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" @onclick="() => RedownloadReport(report)">⬇️</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool isAuthorized = false;
+    private bool isGenerating = false;
+    private bool pdfReady = false;
+    private bool isMaui = false;
+
+    private string selectedType = "Occupancy";
+    private DateTime startDate = DateTime.Today.AddDays(-30);
+    private DateTime endDate = DateTime.Today;
+
+    private byte[]? pdfBytes;
+    private string generatedFileName = "";
+    private string errorMessage = "";
+    private int estimatedSizeKb = 0;
+
+    private List<ReportHistoryItem> recentReports = new();
+
+    private readonly List<ReportTypeOption> reportTypes = new()
+    {
+        new() { Key = "Occupancy", Name = "Occupancy Report", Icon = "🏨", Description = "Room status and utilisation trends" },
+        new() { Key = "Revenue",   Name = "Revenue Report",   Icon = "💰", Description = "Earnings and per-room breakdown" },
+        new() { Key = "Loyalty",   Name = "Loyalty Report",   Icon = "⭐", Description = "Points distributed and redeemed" },
+        new() { Key = "Eco",       Name = "Eco Impact Report",Icon = "🌿", Description = "EcoStay participation and savings" },
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user = SessionService.CurrentUser;
+        isAuthorized = user != null && (user.Role == "Manager" || user.Role == "Owner");
+
+        // Detect MAUI context
+        try { isMaui = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS(); }
+        catch { isMaui = false; }
+    }
+
+    private async Task GenerateReport()
+    {
+        if (string.IsNullOrEmpty(selectedType)) return;
+        errorMessage = "";
+        pdfReady = false;
+        isGenerating = true;
+
+        try
+        {
+            pdfBytes = await ReportService.GenerateReportAsync(selectedType, startDate, endDate);
+
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                errorMessage = "No data available for the selected period. Please choose a different date range.";
+            }
+            else
+            {
+                generatedFileName = $"LodgeStay_{selectedType}Report_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf";
+                estimatedSizeKb = pdfBytes.Length / 1024;
+                pdfReady = true;
+
+                recentReports.Insert(0, new ReportHistoryItem
+                {
+                    Type = selectedType,
+                    FileName = generatedFileName,
+                    GeneratedAt = DateTime.Now,
+                    Data = pdfBytes
+                });
+                if (recentReports.Count > 5) recentReports.RemoveAt(5);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Report generation failed. Please try again. ({ex.Message})";
+        }
+
+        isGenerating = false;
+    }
+
+    private async Task DownloadPdf()
+    {
+        if (pdfBytes == null) return;
+        var base64 = Convert.ToBase64String(pdfBytes);
+        await JS.InvokeVoidAsync("downloadFileFromBase64", generatedFileName, "application/pdf", base64);
+    }
+
+    private async Task SharePdf()
+    {
+        if (pdfBytes == null) return;
+        var tempPath = Path.Combine(FileSystem.CacheDirectory, generatedFileName);
+        await File.WriteAllBytesAsync(tempPath, pdfBytes);
+        await Share.RequestAsync(new ShareFileRequest
+        {
+            Title = generatedFileName,
+            File = new ShareFile(tempPath, "application/pdf")
+        });
+    }
+
+    private async Task RedownloadReport(ReportHistoryItem report)
+    {
+        pdfBytes = report.Data;
+        generatedFileName = report.FileName;
+        pdfReady = true;
+        await DownloadPdf();
+    }
+
+    private void SetRange(int days)
+    {
+        endDate = DateTime.Today;
+        startDate = DateTime.Today.AddDays(-days + 1);
+    }
+
+    private void SetThisMonth()
+    {
+        startDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+        endDate = DateTime.Today;
+    }
+
+    private string GetTypeIcon(string type) => type switch
+    {
+        "Occupancy" => "🏨",
+        "Revenue"   => "💰",
+        "Loyalty"   => "⭐",
+        "Eco"       => "🌿",
+        _           => "📄"
+    };
+
+    private class ReportTypeOption
+    {
+        public string Key         { get; set; } = "";
+        public string Name        { get; set; } = "";
+        public string Icon        { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+
+    private class ReportHistoryItem
+    {
+        public string   Type        { get; set; } = "";
+        public string   FileName    { get; set; } = "";
+        public DateTime GeneratedAt { get; set; }
+        public byte[]   Data        { get; set; } = Array.Empty<byte>();
+    }
+}
+
+<style>
+    .page-container { padding: 1rem; max-width: 860px; margin: 0 auto; }
+    .page-header { margin-bottom: 1rem; }
+    .page-title { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; margin: 0; }
+    .page-sub { color: #666; font-size: 0.875rem; margin: 4px 0 0; }
+
+    .card { background: #fff; border-radius: 12px; padding: 1.3rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 1rem; }
+    .section-title { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-bottom: 1rem; }
+
+    .report-type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; }
+    .report-type-card { background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.2s; }
+    .report-type-card:hover { border-color: #2e75b6; background: #f0f4ff; }
+    .report-type-card.selected { border-color: #2e75b6; background: #e8f0fe; box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
+    .rt-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
+    .rt-name { font-weight: 600; font-size: 0.9rem; color: #1a1a2e; }
+    .rt-desc { font-size: 0.75rem; color: #777; margin-top: 3px; }
+
+    .date-row { display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
+    .date-arrow { font-size: 1.3rem; color: #aaa; padding-bottom: 0.3rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
+    .form-group label { font-size: 0.82rem; font-weight: 500; color: #555; }
+    .form-control { border: 1px solid #ddd; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem; }
+    .quick-range-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .quick-btn { background: #f0f4ff; border: 1px solid #c5d5f0; border-radius: 8px; padding: 4px 14px; font-size: 0.8rem; cursor: pointer; color: #2e75b6; font-weight: 500; }
+    .quick-btn:hover { background: #dce8fb; }
+
+    .generate-card { }
+    .generate-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    .summary-chip { background: #f0f4ff; border: 1px solid #c5d5f0; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; color: #2e75b6; font-weight: 500; }
+
+    .btn-generate { width: 100%; padding: 0.85rem; background: #2e75b6; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; }
+    .btn-generate:hover:not(:disabled) { background: #245e99; }
+    .btn-generate:disabled { opacity: 0.65; cursor: not-allowed; }
+    .btn-spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    .result-card { border-left: 4px solid #28a745; }
+    .result-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .result-icon { font-size: 2.2rem; }
+    .result-title { font-weight: 700; font-size: 1rem; }
+    .result-filename { font-size: 0.78rem; color: #666; font-family: monospace; }
+    .share-actions { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
+    .btn-download { background: #2e75b6; color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+    .btn-share    { background: #28a745; color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
+    .report-meta  { display: flex; gap: 1.5rem; font-size: 0.78rem; color: #aaa; }
+
+    .history-list { display: flex; flex-direction: column; gap: 0.6rem; }
+    .history-row  { display: flex; align-items: center; gap: 0.85rem; padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0; }
+    .history-icon { font-size: 1.4rem; }
+    .history-info { flex: 1; }
+    .history-name { font-size: 0.85rem; font-weight: 500; }
+    .history-date { font-size: 0.75rem; color: #aaa; }
+
+    .btn { padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
+    .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
+    .btn-outline-primary { background: transparent; border: 1px solid #2e75b6; color: #2e75b6; }
+    .alert { padding: 0.65rem 1rem; border-radius: 8px; margin-top: 0.75rem; font-size: 0.85rem; }
+    .alert-warning { background: #fff3cd; color: #856404; }
+    .alert-danger  { background: #f8d7da; color: #721c24; }
+</style>
