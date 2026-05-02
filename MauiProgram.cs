@@ -48,6 +48,7 @@ public static class MauiProgram
         // Sprint 3 Services
         builder.Services.AddSingleton<EcoStayService>();
         builder.Services.AddSingleton<ReportService>();
+        builder.Services.AddSingleton<NotificationService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
