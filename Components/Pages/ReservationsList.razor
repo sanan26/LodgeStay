@@ -1,4 +1,4 @@
-﻿@page "/reservations"
+@page "/reservations"
 @using LodgeStay.Models
 @using LodgeStay.Services
 @inject NavigationManager Navigation
@@ -9,6 +9,7 @@
     <div class="page-header">
         <div class="header-left">
             <button class="btn-back" @onclick="GoBack">← Back</button>
+            <DashboardButton />
             <h2>📋 Reservations</h2>
         </div>
         <div class="header-actions">
