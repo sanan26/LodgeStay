@@ -76,7 +76,7 @@
                 }
                 else
                 {
-                    <span>📄 Generate PDF</span>
+                    <span>📄 Generate Report</span>
                 }
             </button>
 
@@ -101,7 +101,7 @@
                 <div class="share-actions">
                     <!-- Web: download button using JS interop -->
                     <button class="btn btn-download" @onclick="DownloadPdf">
-                        ⬇️ Download PDF
+                        ⬇️ Download CSV
                     </button>
 
                     <!-- Mobile: share sheet (rendered in MAUI context) -->
@@ -168,14 +168,12 @@
         new() { Key = "Eco",       Name = "Eco Impact Report",Icon = "🌿", Description = "EcoStay participation and savings" },
     };
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync()
     {
         var user = SessionService.CurrentUser;
         isAuthorized = user != null && (user.Role == "Manager" || user.Role == "Owner");
-
-        // Detect MAUI context
-        try { isMaui = OperatingSystem.IsAndroid() || OperatingSystem.IsIOS(); }
-        catch { isMaui = false; }
+        isMaui = false;
+        return Task.CompletedTask;
     }
 
     private async Task GenerateReport()
@@ -195,7 +193,7 @@
             }
             else
             {
-                generatedFileName = $"LodgeStay_{selectedType}Report_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.pdf";
+                generatedFileName = $"LodgeStay_{selectedType}Report_{startDate:yyyyMMdd}_{endDate:yyyyMMdd}.csv";
                 estimatedSizeKb = pdfBytes.Length / 1024;
                 pdfReady = true;
 
@@ -221,7 +219,7 @@
     {
         if (pdfBytes == null) return;
         var base64 = Convert.ToBase64String(pdfBytes);
-        await JS.InvokeVoidAsync("downloadFileFromBase64", generatedFileName, "application/pdf", base64);
+        await JS.InvokeVoidAsync("downloadFileFromBase64", generatedFileName, "text/csv", base64);
     }
 
     private async Task SharePdf()

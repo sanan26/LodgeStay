@@ -396,5 +396,15 @@ namespace LodgeStay.Data
                             .Where(r => r.Id == id)
                             .FirstOrDefaultAsync();
         }
+        public async Task ClearEcoActionsAsync()
+        {
+            await _database.ExecuteAsync("DELETE FROM EcoAction");
+            await _database.ExecuteAsync("UPDATE GuestProfile SET EcoPoints = 0");
+        }
+
+        public async Task ClearUsersAsync()
+        {
+            await _database.ExecuteAsync("DELETE FROM User");
+        }
     }
 }

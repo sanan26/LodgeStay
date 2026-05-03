@@ -2,6 +2,7 @@
 @using LodgeStay.Data
 @using LodgeStay.Models
 @using LodgeStay.Services
+@inject AuthService AuthService
 @inject DatabaseContext DbContext
 @inject NavigationManager Navigation
 @inject SessionService SessionService
@@ -33,6 +34,7 @@
         {
             <button class="btn-login" @onclick="HandleLogin">Log In</button>
         }
+
         <p class="signup-link">Don't have an account? <a href="/register">Sign Up</a></p>
     </div>
 </div>
@@ -56,10 +58,9 @@
 
         try
         {
-            var hashedPassword = HashPassword(password);
-            var users = await DbContext.GetUsersAsync();
-            var user = users.FirstOrDefault(u =>
-                u.Email == email && u.PasswordHash == hashedPassword);
+            // FIX: Use AuthService.LoginAsync which verifies with BCrypt.
+            // The old code used SHA256 directly which never matched BCrypt hashes.
+            var user = await AuthService.LoginAsync(email, password);
 
             if (user == null)
             {
@@ -73,14 +74,13 @@
                 return;
             }
 
-            // ✅ Set session so NavMenu updates
             SessionService.Login(user);
 
             Navigation.NavigateTo(user.Role switch
             {
-                "Manager" => "/manager-dashboard",
-                "Owner" => "/owner-dashboard",
-                _ => "/staff-dashboard"
+                "Manager" => "/dashboard",
+                "Owner"   => "/owner-dashboard",
+                _         => "/"
             });
         }
         catch (Exception ex)
@@ -93,11 +93,15 @@
         }
     }
 
-    private string HashPassword(string password)
+    // DEV ONLY: Remove before submission
+    private async Task ClearUsers()
     {
-        var bytes = System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(bytes);
+        await DbContext.ClearUsersAsync();
+        errorMessage = "";
+        email = "";
+        password = "";
+        StateHasChanged();
+        errorMessage = "✅ Users cleared. Go to Register to create new accounts.";
     }
 }
 
@@ -120,35 +124,12 @@
         text-align: center;
     }
 
-    .logo {
-        font-size: 3rem;
-        margin-bottom: 0.5rem;
-    }
+    .logo { font-size: 3rem; margin-bottom: 0.5rem; }
+    h2 { color: #2e7d32; margin-bottom: 0.25rem; }
+    .subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
 
-    h2 {
-        color: #2e7d32;
-        margin-bottom: 0.25rem;
-    }
-
-    .subtitle {
-        color: #888;
-        margin-bottom: 1.5rem;
-        font-size: 0.9rem;
-    }
-
-    .form-group {
-        text-align: left;
-        margin-bottom: 1rem;
-    }
-
-    label {
-        display: block;
-        font-size: 0.85rem;
-        color: #555;
-        margin-bottom: 4px;
-        font-weight: 600;
-    }
-
+    .form-group { text-align: left; margin-bottom: 1rem; }
+    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; font-weight: 600; }
     input {
         width: 100%;
         padding: 10px 12px;
@@ -157,11 +138,7 @@
         font-size: 1rem;
         box-sizing: border-box;
     }
-
-        input:focus {
-            outline: none;
-            border-color: #2e7d32;
-        }
+    input:focus { outline: none; border-color: #2e7d32; }
 
     .btn-login {
         width: 100%;
@@ -174,10 +151,7 @@
         cursor: pointer;
         margin-top: 0.5rem;
     }
-
-        .btn-login:hover {
-            background-color: #1b5e20;
-        }
+    .btn-login:hover { background-color: #1b5e20; }
 
     .error-box {
         background: #ffebee;
@@ -188,15 +162,6 @@
         font-size: 0.9rem;
     }
 
-    .signup-link {
-        margin-top: 1.5rem;
-        font-size: 0.9rem;
-        color: #555;
-    }
-
-        .signup-link a {
-            color: #2e7d32;
-            font-weight: 600;
-            text-decoration: none;
-        }
+    .signup-link { margin-top: 1.5rem; font-size: 0.9rem; color: #555; }
+    .signup-link a { color: #2e7d32; font-weight: 600; text-decoration: none; }
 </style>
