@@ -6,9 +6,10 @@ namespace LodgeStay.Services
     public class NotificationService
     {
         private readonly DatabaseContext _db;
-
-        // Occupancy threshold — alert fires when below this percentage
         private const double LowOccupancyThreshold = 30.0;
+        private int _notificationCounter = 0;
+
+        public event Action<InAppNotification>? OnInAppNotification;
 
         public NotificationService(DatabaseContext db)
         {
@@ -16,7 +17,6 @@ namespace LodgeStay.Services
         }
 
         // ── New booking alert ─────────────────────────────────────────────────
-        // Call this immediately after a reservation is created
         public async Task<NotificationResult> SendNewBookingAlertAsync(int reservationId)
         {
             var reservation = await _db.GetReservationByIdAsync(reservationId);
@@ -29,12 +29,10 @@ namespace LodgeStay.Services
                              $"Ref: {reservation.BookingReference}";
 
             ShowLocalNotification(title, message);
-
             return new NotificationResult(true, message);
         }
 
         // ── Check-in reminder ─────────────────────────────────────────────────
-        // Call this on app startup each morning to notify about today's check-ins
         public async Task<NotificationResult> SendCheckinReminderAsync()
         {
             var reservations = await _db.GetAllReservationsAsync();
@@ -50,7 +48,6 @@ namespace LodgeStay.Services
             string message = string.Join(", ", todayCheckins.Select(r => r.GuestName));
 
             ShowLocalNotification(title, message);
-
             return new NotificationResult(true, $"{todayCheckins.Count} check-in(s) today: {message}");
         }
 
@@ -70,12 +67,10 @@ namespace LodgeStay.Services
             string message = string.Join(", ", todayCheckouts.Select(r => r.GuestName));
 
             ShowLocalNotification(title, message);
-
             return new NotificationResult(true, $"{todayCheckouts.Count} check-out(s) today: {message}");
         }
 
-        // ── Low occupancy alert ───────────────────────────────────────────────
-        // Call this from the dashboard after calculating occupancy
+        // ── Low occupancy alert (no argument) ────────────────────────────────
         public async Task<NotificationResult> SendOccupancyAlertAsync()
         {
             var rooms = await _db.GetAllRoomsAsync();
@@ -99,12 +94,22 @@ namespace LodgeStay.Services
                              $"{rooms.Count - occupiedToday.Count} rooms available. Consider offering a discount.";
 
             ShowLocalNotification(title, message);
-
             return new NotificationResult(true, message);
         }
 
-        // ── Check if today has any events worth notifying ─────────────────────
-        // Call this on app startup
+        // ── Low occupancy alert (with argument — called from dashboard) ───────
+        public async Task<NotificationResult> SendOccupancyAlertAsync(double occupancyPercent)
+        {
+            if (occupancyPercent >= LowOccupancyThreshold)
+                return new NotificationResult(true, $"Occupancy {occupancyPercent:F1}%. No alert needed.");
+
+            string title = "Low Occupancy Alert";
+            string message = $"Occupancy is at {occupancyPercent:F1}% — consider offering a discount.";
+            ShowLocalNotification(title, message);
+            return new NotificationResult(true, message);
+        }
+
+        // ── Morning checks ────────────────────────────────────────────────────
         public async Task RunMorningChecksAsync()
         {
             await SendCheckinReminderAsync();
@@ -112,23 +117,45 @@ namespace LodgeStay.Services
             await SendOccupancyAlertAsync();
         }
 
+        // ── Preferences ───────────────────────────────────────────────────────
+        public async Task<NotificationPreferences> GetPreferencesAsync(int userId)
+        {
+            return await Task.FromResult(new NotificationPreferences());
+        }
+
+        public async Task SavePreferencesAsync(int userId, NotificationPreferences prefs)
+        {
+            await Task.CompletedTask;
+        }
+
+        // ── Browser permission ────────────────────────────────────────────────
+        public async Task<bool> GetBrowserPermissionStatusAsync()
+        {
+            return await Task.FromResult(true);
+        }
+
+        public async Task<bool> RequestBrowserPermissionAsync()
+        {
+            return await Task.FromResult(true);
+        }
+
         // ── Local notification display ────────────────────────────────────────
-        // Uses built-in MAUI local notification approach
-        // Replace with a plugin like Plugin.LocalNotification if needed
         private void ShowLocalNotification(string title, string message)
         {
-#if ANDROID || IOS
-            // For full push notifications install Plugin.LocalNotification:
-            // dotnet add package Plugin.LocalNotification
-            // Then replace this with:
-            // LocalNotificationCenter.Current.Show(title, message, notificationId++);
+            var notification = new InAppNotification
+            {
+                Id = ++_notificationCounter,
+                Title = title,
+                Message = message,
+                IsVisible = true,
+                IsExiting = false,
+                Type = "info"
+            };
+            OnInAppNotification?.Invoke(notification);
             System.Diagnostics.Debug.WriteLine($"[NOTIFICATION] {title}: {message}");
-#else
-            // PWA / Windows — log to debug console
-            System.Diagnostics.Debug.WriteLine($"[NOTIFICATION] {title}: {message}");
-#endif
         }
-    }
+
+    } // ← NotificationService ends here
 
     // ── Result DTO ────────────────────────────────────────────────────────────
     public class NotificationResult
@@ -142,4 +169,5 @@ namespace LodgeStay.Services
             Message = message;
         }
     }
-}
+
+} // ← namespace ends here

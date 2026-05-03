@@ -45,7 +45,7 @@
                     </div>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" @bind="prefs.CheckInReminder" @bind:after="SavePrefs" />
+                    <input type="checkbox" @bind="prefs.CheckIn" @bind:after="SavePrefs" />
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -59,7 +59,7 @@
                     </div>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" @bind="prefs.CheckOutReminder" @bind:after="SavePrefs" />
+                    <input type="checkbox" @bind="prefs.CheckOut" @bind:after="SavePrefs" />
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -112,13 +112,13 @@
 
     protected override async Task OnInitializedAsync()
     {
-        prefs = await NotificationService.GetPreferencesAsync(SessionService.CurrentUser?.Id ?? 0);
+        prefs = await NotificationService.GetPreferencesAsync(SessionService.CurrentUser?.User_ID ?? 0);
         await CheckBrowserPermission();
     }
 
     private async Task SavePrefs()
     {
-        await NotificationService.SavePreferencesAsync(SessionService.CurrentUser?.Id ?? 0, prefs);
+        await NotificationService.SavePreferencesAsync(SessionService.CurrentUser?.User_ID ?? 0, prefs);
         saved = true;
         StateHasChanged();
         await Task.Delay(2000);
@@ -131,12 +131,15 @@
         // In a real MAUI Blazor Hybrid app this runs only in web/PWA context
         try
         {
-            permissionLabel = await NotificationService.GetBrowserPermissionStatusAsync();
+            // FIX: GetBrowserPermissionStatusAsync returns bool (granted = true).
+            // Convert to display string here instead of assigning bool to string.
+            bool granted = await NotificationService.GetBrowserPermissionStatusAsync();
+            permissionLabel = granted ? "Granted" : "Denied";
             (permissionIcon, permissionStatusClass) = permissionLabel switch
             {
-                "Granted"  => ("✅", "status-granted"),
-                "Denied"   => ("❌", "status-denied"),
-                _          => ("❓", "status-unknown")
+                "Granted" => ("✅", "status-granted"),
+                "Denied"  => ("❌", "status-denied"),
+                _         => ("❓", "status-unknown")
             };
         }
         catch

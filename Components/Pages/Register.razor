@@ -1,7 +1,7 @@
 @page "/register"
 @using LodgeStay.Models
-@using LodgeStay.Data
-@inject DatabaseContext DbContext
+@using LodgeStay.Services
+@inject AuthService AuthService
 @inject NavigationManager Navigation
 
 <div class="login-container">
@@ -37,11 +37,11 @@
 
         @if (!string.IsNullOrEmpty(errorMessage))
         {
-                <div class="error-box">⚠️ @errorMessage</div>
+            <div class="error-box">⚠️ @errorMessage</div>
         }
         @if (!string.IsNullOrEmpty(successMessage))
         {
-                <div class="success-box">✅ @successMessage</div>
+            <div class="success-box">✅ @successMessage</div>
         }
 
         <button class="btn-login" @onclick="HandleRegister">Register</button>
@@ -50,17 +50,20 @@
 </div>
 
 @code {
-    private string name = "";
-    private string email = "";
-    private string phone = "";
+    private string name     = "";
+    private string email    = "";
+    private string phone    = "";
     private string password = "";
-    private string role = "Staff";
-    private string errorMessage = "";
+    private string role     = "Staff";
+    private string errorMessage  = "";
     private string successMessage = "";
 
     private async Task HandleRegister()
     {
-        if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
+        errorMessage = "";
+        successMessage = "";
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
             errorMessage = "Please fill in all required fields.";
             return;
@@ -71,41 +74,30 @@
             return;
         }
 
-        try
+        // FIX: Use AuthService.SignupAsync which BCrypt-hashes the password.
+        // The old code used SHA256 directly, which made login always fail
+        // because AuthService.LoginAsync verifies with BCrypt.
+        var user = new User
         {
-            var users = await DbContext.GetUsersAsync();
-            if (users.Any(u => u.Email == email))
-            {
-                errorMessage = "An account with this email already exists.";
-                return;
-            }
+            Name       = name,
+            Email      = email,
+            PhoneNo    = phone,
+            PasswordHash = password, // AuthService.SignupAsync will BCrypt this
+            Role       = role,
+            IsVerified = true
+        };
 
-            var user = new User
-                {
-                    Name = name,
-                    Email = email,
-                    PhoneNo = phone,
-                    PasswordHash = HashPassword(password),
-                    Role = role,
-                    IsVerified = true
-                };
+        bool success = await AuthService.SignupAsync(user);
 
-            await DbContext.SaveUserAsync(user);
-            successMessage = "Account created! Redirecting to login...";
-            await Task.Delay(1500);
-            Navigation.NavigateTo("/login");
-        }
-        catch (Exception ex)
+        if (!success)
         {
-            errorMessage = $"Error: {ex.Message}";
+            errorMessage = "An account with this email already exists.";
+            return;
         }
-    }
 
-    private string HashPassword(string password)
-    {
-        var bytes = System.Security.Cryptography.SHA256.HashData(
-            System.Text.Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(bytes);
+        successMessage = "Account created! Redirecting to login...";
+        await Task.Delay(1500);
+        Navigation.NavigateTo("/login");
     }
 }
 

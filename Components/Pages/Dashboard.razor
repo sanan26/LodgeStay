@@ -5,6 +5,7 @@
 @inject RoomService RoomService
 @inject NotificationService NotificationService
 @inject SessionService SessionService
+@inject ReportService ReportService
 @inject NavigationManager Navigation
 @implements IDisposable
 
@@ -16,7 +17,6 @@
     }
     else
     {
-        <!-- Page Header -->
         <div class="page-header">
             <h2 class="page-title">📊 Occupancy Dashboard</h2>
             <span class="refresh-badge">Auto-refresh in @refreshCountdown s</span>
@@ -31,7 +31,6 @@
         }
         else
         {
-            <!-- Summary Cards -->
             <div class="summary-grid">
                 <div class="summary-card occupancy-card">
                     <div class="card-icon">🏨</div>
@@ -45,7 +44,7 @@
                 <div class="summary-card checkin-card">
                     <div class="card-icon">✅</div>
                     <div class="card-body">
-                        <div class="card-value">@summary.TodayCheckIns</div>
+                        <div class="card-value">@todayCheckIns</div>
                         <div class="card-label">Check-ins Today</div>
                     </div>
                 </div>
@@ -53,7 +52,7 @@
                 <div class="summary-card checkout-card">
                     <div class="card-icon">🚪</div>
                     <div class="card-body">
-                        <div class="card-value">@summary.TodayCheckOuts</div>
+                        <div class="card-value">@todayCheckOuts</div>
                         <div class="card-label">Check-outs Today</div>
                     </div>
                 </div>
@@ -61,13 +60,12 @@
                 <div class="summary-card revenue-card">
                     <div class="card-icon">💰</div>
                     <div class="card-body">
-                        <div class="card-value">PKR @summary.MonthRevenue.ToString("N0")</div>
+                        <div class="card-value">PKR @monthRevenue.ToString("N0")</div>
                         <div class="card-label">Revenue This Month</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Low Occupancy Alert Banner -->
             @if (showLowOccupancyAlert)
             {
                 <div class="alert alert-warning alert-dismissible">
@@ -76,7 +74,6 @@
                 </div>
             }
 
-            <!-- Room Status Grid -->
             <div class="section-header">
                 <h3>Room Status</h3>
                 <div class="legend">
@@ -91,10 +88,10 @@
                 @foreach (var room in rooms)
                 {
                     <div class="room-tile @GetRoomStatusClass(room.Status)">
-                        <div class="room-number">@room.RoomNumber</div>
-                        <div class="room-type">@room.Type</div>
+                        <div class="room-number">@room.RoomNo</div>
+                        <div class="room-type">@room.Room_Type</div>
                         <div class="room-status-label">@room.Status</div>
-                        <div class="room-price">PKR @room.PricePerNight/night</div>
+                        <div class="room-price">PKR @room.Price/night</div>
                     </div>
                 }
             </div>
@@ -107,12 +104,17 @@
     private bool isLoading = true;
     private bool showLowOccupancyAlert = false;
 
-    private DashboardSummary summary = new();
     private List<Room> rooms = new();
 
     private int totalRooms = 0;
     private int occupiedRooms = 0;
     private int OccupancyPercent => totalRooms == 0 ? 0 : (int)Math.Round((double)occupiedRooms / totalRooms * 100);
+
+    // FIX: OccupancyReport has no TodayCheckIns/TodayCheckOuts/MonthRevenue.
+    // Derive these directly from the reservations list and revenue report.
+    private int todayCheckIns = 0;
+    private int todayCheckOuts = 0;
+    private double monthRevenue = 0;
 
     private System.Threading.Timer? refreshTimer;
     private int refreshCountdown = 60;
@@ -126,7 +128,6 @@
 
         await LoadDashboard();
 
-        // Auto-refresh every 60 seconds
         refreshTimer = new System.Threading.Timer(async _ =>
         {
             await InvokeAsync(async () =>
@@ -147,10 +148,20 @@
         isLoading = true;
         StateHasChanged();
 
-        summary = await ReservationService.GetTodaysSummaryAsync();
-        rooms = await RoomService.GetAllRoomsAsync();
+        var today = DateTime.Today;
+        var monthStart = new DateTime(today.Year, today.Month, 1);
 
-        totalRooms = rooms.Count;
+        // Occupancy report for this month — use Reservations list to derive counts
+        var occupancyReport = await ReportService.GetOccupancyReportAsync(monthStart, today);
+        todayCheckIns  = occupancyReport.Reservations.Count(r => r.CheckIn.Date  == today);
+        todayCheckOuts = occupancyReport.Reservations.Count(r => r.CheckOut.Date == today);
+
+        // Revenue report for this month
+        var revenueReport = await ReportService.GetRevenueReportAsync(monthStart, today);
+        monthRevenue = revenueReport.TotalRevenue;
+
+        rooms = await RoomService.GetAllRoomsAsync();
+        totalRooms    = rooms.Count;
         occupiedRooms = rooms.Count(r => r.Status == "Occupied" || r.Status == "Reserved");
 
         if (OccupancyPercent < 30)
@@ -188,13 +199,13 @@
     .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .summary-card { background: #fff; border-radius: 12px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #2e75b6; }
     .occupancy-card { border-left-color: #2e75b6; }
-    .checkin-card    { border-left-color: #28a745; }
-    .checkout-card   { border-left-color: #fd7e14; }
-    .revenue-card    { border-left-color: #6f42c1; }
-    .card-icon { font-size: 2rem; }
+    .checkin-card   { border-left-color: #28a745; }
+    .checkout-card  { border-left-color: #fd7e14; }
+    .revenue-card   { border-left-color: #6f42c1; }
+    .card-icon  { font-size: 2rem; }
     .card-value { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; }
     .card-label { font-size: 0.8rem; color: #666; }
-    .card-sub { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    .card-sub   { font-size: 0.75rem; color: #999; margin-top: 2px; }
 
     .alert { padding: 0.85rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
     .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }

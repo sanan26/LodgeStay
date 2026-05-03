@@ -124,9 +124,10 @@ namespace LodgeStay.Data
                         ResponseTemplate = "Dear Guest, free parking is available on premises.",
                         IsActive         = true
                     },
-    });
+                });
             }
 
+        }
         public async Task<User?> GetUserByEmailAsync(string email)
         {
             return await _database.Table<User>()

@@ -10,14 +10,21 @@ namespace LodgeStay.Services
         public bool IsStaff => CurrentUser?.Role == "Staff";
         public bool IsManager => CurrentUser?.Role == "Manager";
         public bool IsOwner => CurrentUser?.Role == "Owner";
+
+        public event Action? OnChange;
+
+        private void NotifyStateChanged() => OnChange?.Invoke();
+
         public void Login(User user)
         {
             CurrentUser = user;
+            NotifyStateChanged();
         }
+
         public void Logout()
         {
             CurrentUser = null;
+            NotifyStateChanged();
         }
-
     }
 }

@@ -6,7 +6,7 @@
 
 @using LodgeStay.Services
 @using LodgeStay.Models
-@inject NotificationService
+@inject NotificationService NotificationService
 @implements IDisposable
 
 @if (visibleNotifications.Count > 0)
@@ -55,7 +55,8 @@
         DismissById(notif.Id);
     }
 
-    private void DismissById(string id)
+    // FIX: changed parameter type from string to int to match InAppNotification.Id (int)
+    private void DismissById(int id)
     {
         var notif = visibleNotifications.FirstOrDefault(n => n.Id == id);
         if (notif != null) visibleNotifications.Remove(notif);

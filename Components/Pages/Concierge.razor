@@ -20,17 +20,15 @@
                placeholder="Type a keyword (e.g. check-in, breakfast, Wi-Fi)..."
                @bind="searchKeyword"
                @bind:event="oninput"
-               @oninput="OnSearchInput" />
+               @bind:after="OnSearchInput" />
         @if (!string.IsNullOrEmpty(searchKeyword))
         {
             <button class="clear-btn" @onclick="ClearSearch">✕</button>
         }
     </div>
 
-    <!-- Mode: search results OR category browser -->
     @if (!string.IsNullOrWhiteSpace(searchKeyword))
     {
-        <!-- Search Results -->
         <div class="results-header">
             <span>Results for "<strong>@searchKeyword</strong>"</span>
             <span class="result-count">@searchResults.Count found</span>
@@ -70,7 +68,6 @@
     }
     else
     {
-        <!-- Category Browser -->
         <div class="category-section">
             <h3 class="section-title">Browse by Category</h3>
             <div class="category-chips-row">
@@ -126,7 +123,6 @@
         }
     }
 
-    <!-- Manager: Add New Rule -->
     @if (isManager)
     {
         <div class="manager-panel">
@@ -190,9 +186,8 @@
 
     private System.Threading.CancellationTokenSource? _searchDebounce;
 
-    private async Task OnSearchInput(ChangeEventArgs e)
+    private async Task OnSearchInput()
     {
-        searchKeyword = e.Value?.ToString() ?? "";
         _searchDebounce?.Cancel();
         _searchDebounce = new System.Threading.CancellationTokenSource();
         var token = _searchDebounce.Token;
@@ -213,13 +208,21 @@
         if (string.IsNullOrWhiteSpace(searchKeyword)) return;
         isSearching = true;
         StateHasChanged();
-        searchResults = await ConciergeService.SearchByKeywordAsync(searchKeyword);
+
+        // FIX: SearchByKeywordAsync returns ConciergeResult where Rule is a single
+        // ConciergeRule? — not a list. Wrap it in a list for display.
+        var result = await ConciergeService.SearchByKeywordAsync(searchKeyword);
+        searchResults = (result.Success && result.Rule != null)
+            ? new List<ConciergeRule> { result.Rule }
+            : new List<ConciergeRule>();
+
         isSearching = false;
     }
 
     private async Task SelectCategory(string category)
     {
         activeCategory = category;
+        // FIX: GetByCategoryAsync returns List<ConciergeRule> directly — no ConciergeResult wrapper.
         categoryRules = await ConciergeService.GetByCategoryAsync(category);
     }
 
@@ -232,7 +235,6 @@
     private async Task CopyToClipboard(string text)
     {
         await JS.InvokeVoidAsync("navigator.clipboard.writeText", text);
-        // Find rule id to show toast — use hash as stand-in
         copiedRuleId = text.GetHashCode();
         StateHasChanged();
         await Task.Delay(2000);
@@ -251,10 +253,15 @@
         }
 
         newRule.IsActive = true;
-        await ConciergeService.AddRuleAsync(newRule);
-        managerMessage = "✅ Response added successfully.";
-        managerSuccess = true;
-        newRule = new();
+        var (success, message) = await ConciergeService.AddRuleAsync(
+            newRule.Keywords,
+            newRule.Category,
+            newRule.ResponseText,
+            newRule.ResponseTemplate ?? "");
+
+        managerMessage = success ? "✅ Response added successfully." : message;
+        managerSuccess = success;
+        if (success) newRule = new();
 
         if (!string.IsNullOrEmpty(activeCategory))
             categoryRules = await ConciergeService.GetByCategoryAsync(activeCategory);

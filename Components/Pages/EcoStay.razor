@@ -195,9 +195,9 @@
                             @foreach (var row in propertyAggregate.ActionBreakdown)
                             {
                                 <tr>
-                                    <td>@GetActionIcon(row.ActionType) @row.ActionType</td>
-                                    <td>@row.Count</td>
-                                    <td>@row.TotalPoints</td>
+                                    <td>@GetActionIcon(row.Key) @row.Key</td>
+                                    <td>@row.Value</td>
+                                    <td>—</td>
                                 </tr>
                             }
                         </tbody>
@@ -248,7 +248,7 @@
         if (isManager)
             propertyAggregate = await EcoStayService.GetPropertyEcoAggregateAsync();
 
-        var currentUserId = user?.Id ?? 0;
+        var currentUserId = user?.User_ID ?? 0;
         if (currentUserId > 0)
             ecoStats = await EcoStayService.GetGuestEcoStatsAsync(currentUserId);
     }
@@ -260,9 +260,13 @@
         currentGuest = await GuestService.GetGuestByIdAsync(lookupGuestId);
         if (currentGuest == null) return;
 
-        var recorded = await EcoStayService.GetRecordedActionsAsync(lookupGuestId, lookupReservationId);
+        // FIX: GetRecordedActionsAsync returns List<EcoAction>, not List<string>.
+        // Select the ActionType strings so .Contains(a.ActionType) works correctly.
+        var recordedActions = await EcoStayService.GetRecordedActionsAsync(lookupGuestId, lookupReservationId);
+        var recordedTypes = recordedActions.Select(a => a.ActionType).ToHashSet();
+
         foreach (var a in ecoActions)
-            a.IsRecorded = recorded.Contains(a.ActionType);
+            a.IsRecorded = recordedTypes.Contains(a.ActionType);
 
         guestLoaded = true;
         ecoStats = await EcoStayService.GetGuestEcoStatsAsync(lookupGuestId);
@@ -286,7 +290,7 @@
         }
         else
         {
-            actionMessage = result.ErrorMessage ?? "Failed to record action.";
+            actionMessage = result.Message ?? "Failed to record action.";
             actionSuccess = false;
         }
 

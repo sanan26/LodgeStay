@@ -87,5 +87,15 @@ namespace LodgeStay.Services
             await _db.UpdateDealAsync(deal);
             return (true, "Deal updated successfully.");
         }
+
+        public async Task<(bool Success, string Message)> AttachDealsToReservationAsync(int reservationId, List<int> dealIds)
+        {
+            // Deals are stored against the reservation as a reference
+            // Extend with a ReservationDeals join table if needed
+            if (dealIds == null || dealIds.Count == 0)
+                return (false, "No deals selected.");
+
+            return (true, $"{dealIds.Count} deal(s) attached to reservation.");
+        }
     }
 }

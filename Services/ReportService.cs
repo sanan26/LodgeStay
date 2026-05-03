@@ -30,7 +30,7 @@ namespace LodgeStay.Services
                 TotalRooms = rooms.Count,
                 TotalReservations = filtered.Count,
                 OccupancyPercent = rooms.Count == 0 ? 0 :
-                                     Math.Round((double)filtered.Count / rooms.Count * 100, 1),
+                                    Math.Round((double)filtered.Count / rooms.Count * 100, 1),
                 Reservations = filtered
             };
         }
@@ -89,8 +89,8 @@ namespace LodgeStay.Services
                 TotalPointsRedeemed = Math.Abs(history.Where(h => h.Points < 0).Sum(h => h.Points)),
                 TotalTransactions = history.Count,
                 TopGuests = guests.OrderByDescending(g => g.LoyaltyPoints)
-                                           .Take(5)
-                                           .ToList()
+                                            .Take(5)
+                                            .ToList()
             };
         }
 
@@ -116,9 +116,60 @@ namespace LodgeStay.Services
                 UniqueGuestsParticipated = filtered.Select(a => a.GuestId).Distinct().Count()
             };
         }
-    }
 
-    // ── Report DTOs ───────────────────────────────────────────────────────────
+        // ── Generate Report as bytes (CSV) ────────────────────────────────────
+        public async Task<byte[]> GenerateReportAsync(string reportType, DateTime startDate, DateTime endDate)
+        {
+            string content = reportType switch
+            {
+                "Occupancy" => await GenerateOccupancyCsvAsync(startDate, endDate),
+                "Revenue" => await GenerateRevenueCsvAsync(startDate, endDate),
+                "Loyalty" => await GenerateLoyaltyCsvAsync(startDate, endDate),
+                "Eco" => await GenerateEcoCsvAsync(startDate, endDate),
+                _ => "Invalid report type"
+            };
+            return System.Text.Encoding.UTF8.GetBytes(content);
+        }
+
+        // ── Private CSV helpers ───────────────────────────────────────────────
+        private async Task<string> GenerateOccupancyCsvAsync(DateTime start, DateTime end)
+        {
+            var report = await GetOccupancyReportAsync(start, end);
+            var lines = new List<string> { "BookingReference,GuestName,CheckIn,CheckOut,Status" };
+            lines.AddRange(report.Reservations.Select(r =>
+                $"{r.BookingReference},{r.GuestName},{r.CheckIn:dd-MM-yyyy},{r.CheckOut:dd-MM-yyyy},{r.Status}"));
+            return string.Join("\n", lines);
+        }
+
+        private async Task<string> GenerateRevenueCsvAsync(DateTime start, DateTime end)
+        {
+            var report = await GetRevenueReportAsync(start, end);
+            var lines = new List<string> { "BookingReference,GuestName,Room,CheckIn,CheckOut,TotalPrice" };
+            lines.AddRange(report.LineItems.Select(r =>
+                $"{r.BookingReference},{r.GuestName},{r.RoomNo},{r.CheckIn:dd-MM-yyyy},{r.CheckOut:dd-MM-yyyy},{r.TotalPrice}"));
+            return string.Join("\n", lines);
+        }
+
+        private async Task<string> GenerateLoyaltyCsvAsync(DateTime start, DateTime end)
+        {
+            var report = await GetLoyaltyReportAsync(start, end);
+            var lines = new List<string> { "GuestName,Email,LoyaltyPoints,LoyaltyTier" };
+            lines.AddRange(report.TopGuests.Select(g =>
+                $"{g.Name},{g.Email},{g.LoyaltyPoints},{g.LoyaltyTier}"));
+            return string.Join("\n", lines);
+        }
+
+        private async Task<string> GenerateEcoCsvAsync(DateTime start, DateTime end)
+        {
+            var report = await GetEcoReportAsync(start, end);
+            return "TotalActions,TotalEcoPoints,TowelReuse,SkipHousekeeping,DigitalReceipt,WaterSavedLitres\n" +
+                   $"{report.TotalActions},{report.TotalEcoPointsAwarded},{report.TowelReuseCount}," +
+                   $"{report.SkipHousekeepingCount},{report.DigitalReceiptCount},{report.WaterSavedLitres}";
+        }
+
+    } // ← ReportService ends here
+
+    // ── DTOs ──────────────────────────────────────────────────────────────────
 
     public class OccupancyReport
     {
@@ -134,7 +185,7 @@ namespace LodgeStay.Services
     {
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
-        public double TotalRevenue { get; set; } // double not decimal
+        public double TotalRevenue { get; set; }
         public int TotalBookings { get; set; }
         public List<RevenueLineItem> LineItems { get; set; } = new();
     }
@@ -146,7 +197,7 @@ namespace LodgeStay.Services
         public string RoomNo { get; set; } = string.Empty;
         public DateTime CheckIn { get; set; }
         public DateTime CheckOut { get; set; }
-        public double TotalPrice { get; set; } // double not decimal
+        public double TotalPrice { get; set; }
     }
 
     public class LoyaltyReport
@@ -171,4 +222,5 @@ namespace LodgeStay.Services
         public int WaterSavedLitres { get; set; }
         public int UniqueGuestsParticipated { get; set; }
     }
-}
+
+} // ← namespace ends here

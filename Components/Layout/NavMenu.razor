@@ -13,6 +13,9 @@
 
         @if (SessionService.IsloggedIn)
         {
+            <!-- Operations — all logged-in users -->
+            <div class="nav-section-label">Operations</div>
+
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="room-finder">🔍 Room Finder</NavLink>
             </div>
@@ -25,13 +28,46 @@
             <div class="nav-item px-3">
                 <NavLink class="nav-link" href="group-booking">👨‍👩‍👧‍👦 Group Booking</NavLink>
             </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="ecostay">🌿 EcoStay</NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="concierge">💬 Concierge</NavLink>
+            </div>
+            <div class="nav-item px-3">
+                <NavLink class="nav-link" href="notifications/settings">🔔 Notifications</NavLink>
+            </div>
+
+            <!-- Management — Manager + Owner only -->
             @if (SessionService.IsManager || SessionService.IsOwner)
             {
+                <div class="nav-section-label">Management</div>
+
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="loyalty-points">⭐ Loyalty Points</NavLink>
                 </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="dashboard">📊 Dashboard</NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="reports">📈 Reports</NavLink>
+                </div>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="localdeals">🏷️ Local Deals</NavLink>
+                </div>
             }
-            <div class="nav-item px-3">
+
+            <!-- Owner only -->
+            @if (SessionService.IsOwner)
+            {
+                <div class="nav-section-label">Owner</div>
+
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="owner-dashboard">👑 Owner Dashboard</NavLink>
+                </div>
+            }
+
+            <div class="nav-item px-3 mt-2">
                 <button class="nav-link logout-btn" @onclick="Logout">🚪 Logout</button>
             </div>
         }
@@ -45,7 +81,19 @@
     </nav>
 </div>
 
+@implements IDisposable
+
 @code {
+    protected override void OnInitialized()
+    {
+        SessionService.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        SessionService.OnChange -= StateHasChanged;
+    }
+
     private void Logout()
     {
         SessionService.Logout();
@@ -54,6 +102,16 @@
 }
 
 <style>
+    .nav-section-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: rgba(255,255,255,0.4);
+        padding: 1rem 1.5rem 0.25rem;
+        margin-top: 0.25rem;
+    }
+
     .logout-btn {
         background: none;
         border: none;
@@ -69,8 +127,8 @@
         border-radius: 4px;
     }
 
-        .logout-btn:hover {
-            background-color: rgba(255,255,255,0.1);
-            color: white;
-        }
+    .logout-btn:hover {
+        background-color: rgba(255,255,255,0.1);
+        color: white;
+    }
 </style>

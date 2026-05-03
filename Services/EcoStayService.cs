@@ -42,34 +42,43 @@ namespace LodgeStay.Services
             return (true, $"Eco-action recorded! +{points} eco-points awarded.", points);
         }
 
-        public async Task<EcoGuestStats> GetGuestEcoStatsAsync(int guestId)
+        public async Task<GuestEcoStats> GetGuestEcoStatsAsync(int guestId)
         {
             var actions = await _db.GetEcoActionsByGuestAsync(guestId);
+            int towelCount = actions.Count(a => a.ActionType == EcoActionTypes.TowelReuse);
 
-            return new EcoGuestStats
+            return new GuestEcoStats
             {
                 TotalEcoPoints = actions.Sum(a => a.PointsAwarded),
-                TowelReuseCount = actions.Count(a => a.ActionType == EcoActionTypes.TowelReuse),
+                TowelReuseCount = towelCount,
                 SkipHousekeepingCount = actions.Count(a => a.ActionType == EcoActionTypes.SkipHousekeeping),
                 DigitalReceiptCount = actions.Count(a => a.ActionType == EcoActionTypes.DigitalReceipt),
                 TotalActionsCount = actions.Count,
-                WaterSavedLitres = actions.Count(a => a.ActionType == EcoActionTypes.TowelReuse) * 15
+                ActionsCompleted = actions.Count,
+                WaterSavedLitres = towelCount * 15,
+                CO2SavedKg = Math.Round(towelCount * 0.5, 2),
+                Actions = actions
             };
         }
 
-        public async Task<EcoPropertyStats> GetPropertyEcoAggregateAsync()
+        public async Task<PropertyEcoAggregate> GetPropertyEcoAggregateAsync()
         {
             var actions = await _db.GetAllEcoActionsAsync();
+            int towelCount = actions.Count(a => a.ActionType == EcoActionTypes.TowelReuse);
 
-            return new EcoPropertyStats
+            return new PropertyEcoAggregate
             {
-                TotalParticipations = actions.Count,
-                TotalEcoPointsAwarded = actions.Sum(a => a.PointsAwarded),
-                TowelReuseCount = actions.Count(a => a.ActionType == EcoActionTypes.TowelReuse),
-                SkipHousekeepingCount = actions.Count(a => a.ActionType == EcoActionTypes.SkipHousekeeping),
-                DigitalReceiptCount = actions.Count(a => a.ActionType == EcoActionTypes.DigitalReceipt),
-                WaterSavedLitres = actions.Count(a => a.ActionType == EcoActionTypes.TowelReuse) * 15,
-                UniqueGuestsParticipated = actions.Select(a => a.GuestId).Distinct().Count()
+                TotalParticipants = actions.Select(a => a.GuestId).Distinct().Count(),
+                TotalEcoPoints = actions.Sum(a => a.PointsAwarded),
+                TotalActionsRecorded = actions.Count,
+                TotalWaterSaved = towelCount * 15,
+                UniqueGuestsParticipated = actions.Select(a => a.GuestId).Distinct().Count(),
+                ActionBreakdown = new Dictionary<string, int>
+        {
+            { EcoActionTypes.TowelReuse,       towelCount },
+            { EcoActionTypes.SkipHousekeeping, actions.Count(a => a.ActionType == EcoActionTypes.SkipHousekeeping) },
+            { EcoActionTypes.DigitalReceipt,   actions.Count(a => a.ActionType == EcoActionTypes.DigitalReceipt) }
+        }
             };
         }
 
@@ -77,26 +86,34 @@ namespace LodgeStay.Services
         {
             return await _db.GetEcoActionsByReservationAsync(reservationId);
         }
+
+        public async Task<List<EcoAction>> GetRecordedActionsAsync(int guestId, int reservationId)
+        {
+            var all = await _db.GetEcoActionsByReservationAsync(reservationId);
+            return all.Where(a => a.GuestId == guestId).ToList();
+        }
     }
 
-    public class EcoGuestStats
+    public class GuestEcoStats
     {
         public int TotalEcoPoints { get; set; }
         public int TotalActionsCount { get; set; }
+        public int ActionsCompleted { get; set; } // alias for TotalActionsCount
         public int TowelReuseCount { get; set; }
         public int SkipHousekeepingCount { get; set; }
         public int DigitalReceiptCount { get; set; }
         public int WaterSavedLitres { get; set; }
+        public double CO2SavedKg { get; set; }
+        public List<EcoAction> Actions { get; set; } = new();
     }
 
-    public class EcoPropertyStats
+    public class PropertyEcoAggregate
     {
-        public int TotalParticipations { get; set; }
-        public int TotalEcoPointsAwarded { get; set; }
-        public int TowelReuseCount { get; set; }
-        public int SkipHousekeepingCount { get; set; }
-        public int DigitalReceiptCount { get; set; }
-        public int WaterSavedLitres { get; set; }
+        public int TotalParticipants { get; set; }
+        public int TotalEcoPoints { get; set; }
+        public int TotalActionsRecorded { get; set; }
+        public int TotalWaterSaved { get; set; }
         public int UniqueGuestsParticipated { get; set; }
+        public Dictionary<string, int> ActionBreakdown { get; set; } = new();
     }
 }

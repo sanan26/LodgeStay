@@ -4,6 +4,7 @@
 @inject DealService DealService
 @inject ReservationService ReservationService
 @inject SessionService SessionService
+@inject LodgeStay.Data.DatabaseContext DbContext
 
 <div class="page-container">
 
@@ -44,9 +45,9 @@
                     <div class="deal-card">
                         <div class="deal-partner">@deal.PartnerName</div>
                         <div class="deal-desc">@deal.Description</div>
-                        @if (deal.Price.HasValue)
+                        @if (deal.Price > 0)
                         {
-                            <div class="deal-price">PKR @deal.Price.Value.ToString("N0")</div>
+                            <div class="deal-price">PKR @deal.Price.ToString("N0")</div>
                         }
                         else
                         {
@@ -78,7 +79,7 @@
                 <div class="booking-info-bar">
                     <div>
                         <strong>@attachReservation.GuestName</strong>
-                        <span class="muted-text"> · @attachReservation.BookingRef</span>
+                        <span class="muted-text"> · @attachReservation.BookingReference</span>
                     </div>
                     <div class="dates-badge">@attachReservation.CheckIn.ToString("dd MMM") → @attachReservation.CheckOut.ToString("dd MMM")</div>
                 </div>
@@ -99,9 +100,9 @@
                                 <span class="deal-partner">@deal.PartnerName</span>
                                 <span class="deal-desc-sm">@deal.Description</span>
                             </div>
-                            @if (deal.Price.HasValue)
+                            @if (deal.Price > 0)
                             {
-                                <span class="price-tag">PKR @deal.Price.Value.ToString("N0")</span>
+                                <span class="price-tag">PKR @deal.Price.ToString("N0")</span>
                             }
                             else
                             {
@@ -134,9 +135,9 @@
                     {
                         <div class="confirmed-deal-row">
                             <span>✅ @deal.PartnerName — @deal.Description</span>
-                            @if (deal.Price.HasValue)
+                            @if (deal.Price > 0)
                             {
-                                <span class="price-tag">PKR @deal.Price.Value.ToString("N0")</span>
+                                <span class="price-tag">PKR @deal.Price.ToString("N0")</span>
                             }
                         </div>
                     }
@@ -193,7 +194,7 @@
                             <tr class="@(deal.IsActive ? "" : "inactive-row")">
                                 <td>@deal.PartnerName</td>
                                 <td>@deal.Description</td>
-                                <td>@(deal.Price.HasValue ? $"PKR {deal.Price:N0}" : "Free")</td>
+                                <td>@(deal.Price > 0 ? $"PKR {deal.Price:N0}" : "Free")</td>
                                 <td><span class="status-pill @(deal.IsActive ? "active" : "inactive")">@(deal.IsActive ? "Active" : "Inactive")</span></td>
                                 <td>
                                     <button class="btn btn-sm @(deal.IsActive ? "btn-outline-danger" : "btn-outline-success")"
@@ -228,7 +229,7 @@
     private bool attachSuccess = false;
 
     private LocalDeal newDeal = new();
-    private decimal? newDealPrice;
+    private double newDealPrice;
     private string managerMessage = "";
     private bool managerSuccess = false;
 
@@ -247,7 +248,7 @@
     private async Task LoadReservationForAttach()
     {
         if (attachReservationId <= 0) return;
-        attachReservation = await ReservationService.GetReservationByIdAsync(attachReservationId);
+        attachReservation = await DbContext.GetReservationByIdAsync(attachReservationId);
         attachedDealIds.Clear();
         showConfirmation = false;
         attachMessage = "";
@@ -269,10 +270,10 @@
         attachMessage = "";
         if (attachReservation == null || attachedDealIds.Count == 0) return;
 
-        await DealService.AttachDealsToReservationAsync(attachReservation.Id, attachedDealIds.ToList());
+        await DealService.AttachDealsToReservationAsync(attachReservation.Reservation_ID, attachedDealIds.ToList());
         confirmedDeals = activeDeals.Where(d => attachedDealIds.Contains(d.Id)).ToList();
         showConfirmation = true;
-        attachMessage = $"✅ {attachedDealIds.Count} deal(s) attached to booking {attachReservation.BookingRef}.";
+        attachMessage = $"✅ {attachedDealIds.Count} deal(s) attached to booking {attachReservation.BookingReference}.";
         attachSuccess = true;
     }
 
@@ -286,22 +287,20 @@
             return;
         }
 
-        newDeal.Price = newDealPrice;
-        newDeal.IsActive = true;
-        await DealService.AddDealAsync(newDeal);
+        await DealService.AddDealAsync(newDeal.PartnerName, newDeal.Description, newDealPrice);
         managerMessage = "✅ Deal added successfully.";
         managerSuccess = true;
 
         allDeals = await DealService.GetAllDealsAsync();
         activeDeals = await DealService.GetActiveDealsAsync();
         newDeal = new();
-        newDealPrice = null;
+        newDealPrice = 0;
     }
 
     private async Task ToggleDealStatus(LocalDeal deal)
     {
         deal.IsActive = !deal.IsActive;
-        await DealService.UpdateDealAsync(deal);
+        await DealService.UpdateDealAsync(deal.Id, deal.PartnerName, deal.Description, deal.Price);
         activeDeals = await DealService.GetActiveDealsAsync();
     }
 }
