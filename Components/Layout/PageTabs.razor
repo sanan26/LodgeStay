@@ -1,0 +1,104 @@
+@inject NavigationManager Navigation
+
+<div class="page-tabs-wrapper">
+    <div class="page-tabs">
+        <button class="tab-pill @(IsActive("/guest-profile-detail") ? "active" : "")"
+                @onclick='() => NavigateTo("/guest-profiles")'>
+            👤 Guest Profile
+        </button>
+        <button class="tab-pill @(IsActive("/guest-profiles") && !IsActive("/guest-profile-detail") ? "active" : "")"
+                @onclick='() => NavigateTo("/guest-profiles")'>
+            👥 Guest Profiles
+        </button>
+        <button class="tab-pill @(IsActive("/reservations") ? "active" : "")"
+                @onclick='() => NavigateTo("/reservations")'>
+            📋 Reservations
+        </button>
+        <button class="tab-pill @(IsActive("/group-booking") ? "active" : "")"
+                @onclick='() => NavigateTo("/group-booking")'>
+            👨‍👩‍👧‍👦 Group Booking
+        </button>
+        <button class="tab-pill @(IsActive("/ecostay") ? "active" : "")"
+                @onclick='() => NavigateTo("/ecostay")'>
+            🌿 EcoStay
+        </button>
+        <button class="tab-pill @(IsActive("/concierge") ? "active" : "")"
+                @onclick='() => NavigateTo("/concierge")'>
+            💬 Concierge
+        </button>
+    </div>
+</div>
+
+@code {
+    private string currentUrl = "";
+
+    protected override void OnInitialized()
+    {
+        currentUrl = Navigation.Uri;
+        Navigation.LocationChanged += (s, e) =>
+        {
+            currentUrl = Navigation.Uri;
+            StateHasChanged();
+        };
+    }
+
+    private bool IsActive(string path)
+    {
+        return currentUrl.Contains(path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void NavigateTo(string path)
+    {
+        Navigation.NavigateTo(path);
+    }
+}
+
+<style>
+    .page-tabs-wrapper {
+        display: flex;
+        justify-content: flex-start;
+        margin-bottom: 2rem;
+        width: 100%;
+        overflow-x: auto;
+        scrollbar-width: none;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-bottom: 0.5rem;
+    }
+    .page-tabs-wrapper::-webkit-scrollbar { display: none; }
+
+    .page-tabs {
+        display: flex;
+        gap: 0.5rem;
+        background: #0d1117;
+        border: 1px solid rgba(255,255,255,0.05);
+        padding: 4px;
+        border-radius: 12px;
+    }
+
+    .tab-pill {
+        background: transparent;
+        border: none;
+        color: #64748b;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 8px 16px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+    }
+
+    .tab-pill:hover {
+        color: #cbd5e1;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .tab-pill.active {
+        background: rgba(187, 134, 252, 0.15);
+        color: var(--accent-purple);
+        box-shadow: 0 0 10px rgba(187, 134, 252, 0.1);
+    }
+</style>

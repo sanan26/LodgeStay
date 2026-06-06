@@ -1,4 +1,4 @@
-﻿@page "/booking-confirmation/{BookingReference}"
+@page "/booking-confirmation/{BookingReference}"
 @using LodgeStay.Models
 @using LodgeStay.Services
 @inject NavigationManager Navigation
@@ -6,55 +6,86 @@
 @inject ReservationService ReservationService
 
 <div class="confirmation-container">
-    <div class="confirmation-card">
-        <div class="success-icon">✅</div>
-        <h2>Booking Confirmed!</h2>
-        <p class="booking-id">Booking ID: <strong>@BookingReference</strong></p>
+    <div class="glass-panel receipt-card">
+        
+        <div class="success-header">
+            <div class="glow-icon">✨</div>
+            <h2 class="success-title">Booking Confirmed!</h2>
+            <p class="booking-id">Reference: <span class="ref-code">@BookingReference</span></p>
+        </div>
 
         @if (isLoading)
         {
-            <p>Loading booking details...</p>
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Generating your receipt...</p>
+            </div>
         }
         else if (reservation != null)
         {
-            <div class="details">
-                <div class="detail-row">
-                    <span class="detail-label">Guest Name</span>
-                    <span class="detail-value">@reservation.GuestName</span>
+            <div class="receipt-body">
+                <!-- Stay Details Section -->
+                <div class="glass-panel inner-section">
+                    <h4 class="section-title">Guest & Stay Details</h4>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Guest Name</span>
+                            <span class="detail-value">@reservation.GuestName</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Room</span>
+                            <span class="detail-value">Room @reservation.Room_ID</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Check-in</span>
+                            <span class="detail-value">@reservation.CheckIn.ToString("dd MMM yyyy")</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Check-out</span>
+                            <span class="detail-value">@reservation.CheckOut.ToString("dd MMM yyyy")</span>
+                        </div>
+                        <div class="detail-item full-width">
+                            <span class="detail-label">Status</span>
+                            <span class="detail-value status-badge">@reservation.Status</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="detail-row">
-                    <span class="detail-label">Room</span>
-                    <span class="detail-value">Room @reservation.Room_ID</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Check-in</span>
-                    <span class="detail-value">@reservation.CheckIn.ToString("dd MMM yyyy")</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Check-out</span>
-                    <span class="detail-value">@reservation.CheckOut.ToString("dd MMM yyyy")</span>
-                </div>
-                <div class="detail-row total">
-                    <span class="detail-label">Total Price</span>
-                    <span class="detail-value">Rs. @reservation.TotalPrice</span>
-                </div>
-                <div class="detail-row">
-                    <span class="detail-label">Status</span>
-                    <span class="detail-value">@reservation.Status</span>
+
+                <!-- Payment Section -->
+                <div class="glass-panel inner-section payment-section">
+                    <h4 class="section-title">Payment Breakdown</h4>
+                    <div class="detail-row">
+                        <span class="detail-label">Room Charges</span>
+                        <span class="detail-value">Rs. @reservation.TotalPrice.ToString("N0")</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Taxes & Fees</span>
+                        <span class="detail-value">Included</span>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="detail-row total-row">
+                        <span class="detail-label">Total Paid</span>
+                        <span class="total-price">Rs. @reservation.TotalPrice.ToString("N0")</span>
+                    </div>
                 </div>
             </div>
         }
         else
         {
-            <div class="error-message">
-                <p>⚠️ Booking not found.</p>
-                <p>Please check your booking reference and try again.</p>
+            <div class="error-state">
+                <span class="error-icon">⚠️</span>
+                <p>Booking not found.</p>
+                <span class="error-sub">Please check your reference number and try again.</span>
             </div>
         }
 
         <div class="actions">
-            <button class="btn-home" @onclick="GoHome">🏠 Go Back</button>
-            <button class="btn-reservations" @onclick="GoToReservations">📋 All Reservations</button>
+            <button class="glass-button btn-action" @onclick="GoHome">
+                <span class="icon">🏠</span> Home
+            </button>
+            <button class="glass-button btn-action primary-action" @onclick="GoToReservations">
+                <span class="icon">📋</span> View Bookings
+            </button>
         </div>
     </div>
 </div>
@@ -74,7 +105,6 @@
     {
         isLoading = true;
 
-        // Try to get from query parameters first (for new bookings)
         var guestName = GetQueryString("guest");
         var room = GetQueryString("room");
         var checkin = GetQueryString("checkin");
@@ -83,7 +113,6 @@
 
         if (!string.IsNullOrEmpty(guestName) && !string.IsNullOrEmpty(room))
         {
-            // New booking - use query parameters
             reservation = new Reservation
                 {
                     BookingReference = BookingReference,
@@ -97,7 +126,6 @@
         }
         else
         {
-            // Existing booking - get from service
             reservation = await ReservationService.GetReservationByReferenceAsync(BookingReference);
         }
 
@@ -113,7 +141,6 @@
 
     private async Task GoHome()
     {
-        // Use browser history to go back
         await JSRuntime.InvokeVoidAsync("history.back");
     }
 
@@ -129,101 +156,205 @@
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
         padding: 2rem;
+        background: radial-gradient(circle at center, rgba(187, 134, 252, 0.1) 0%, transparent 70%);
     }
 
-    .confirmation-card {
-        background: white;
-        padding: 2.5rem;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    .receipt-card {
+        padding: 3rem;
         width: 100%;
-        max-width: 500px;
+        max-width: 600px;
         text-align: center;
+        border-top: 5px solid var(--accent-purple) !important;
+        position: relative;
+        overflow: hidden;
     }
 
-    .success-icon {
-        font-size: 4rem;
+    /* Ambient glow behind card */
+    .receipt-card::before {
+        content: '';
+        position: absolute;
+        top: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 150px;
+        height: 150px;
+        background: var(--accent-purple);
+        filter: blur(80px);
+        opacity: 0.3;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .success-header {
+        position: relative;
+        z-index: 1;
+        margin-bottom: 2rem;
+    }
+
+    .glow-icon {
+        font-size: 3.5rem;
         margin-bottom: 1rem;
+        filter: drop-shadow(0 0 15px rgba(187, 134, 252, 0.8));
     }
 
-    h2 {
-        color: #2e7d32;
+    .success-title {
+        font-size: 2.2rem;
+        font-weight: 800;
         margin-bottom: 0.5rem;
+        background: linear-gradient(to right, #fff, var(--accent-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .booking-id {
-        color: #888;
-        margin-bottom: 1.5rem;
-        font-size: 0.95rem;
+        color: #94a3b8;
+        font-size: 1rem;
     }
 
-    .details {
+    .ref-code {
+        color: #fff;
+        font-family: monospace;
+        background: rgba(255,255,255,0.1);
+        padding: 4px 10px;
+        border-radius: 6px;
+        letter-spacing: 1px;
+    }
+
+    .receipt-body {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
         text-align: left;
-        margin: 1.5rem 0;
+    }
+
+    .inner-section {
+        background: rgba(0,0,0,0.2) !important;
+        padding: 1.5rem !important;
+        border: 1px solid rgba(255,255,255,0.05) !important;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+        color: var(--accent-purple) !important;
+        margin-bottom: 1.2rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.2rem;
+    }
+
+    .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    .detail-label {
+        font-size: 0.85rem;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .detail-value {
+        font-size: 1.05rem;
+        color: #f1f5f9;
+        font-weight: 600;
+    }
+
+    .status-badge {
+        display: inline-block;
+        background: rgba(3, 218, 198, 0.15);
+        color: #03dac6;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        border: 1px solid rgba(3, 218, 198, 0.3);
+        width: fit-content;
+    }
+
+    .payment-section {
+        background: rgba(187, 134, 252, 0.05) !important;
+        border-color: rgba(187, 134, 252, 0.2) !important;
     }
 
     .detail-row {
         display: flex;
         justify-content: space-between;
-        padding: 10px 0;
-        border-bottom: 1px solid #f0f0f0;
+        align-items: center;
+        margin-bottom: 0.8rem;
     }
+    
+    .detail-row:last-child { margin-bottom: 0; }
 
-    .detail-label {
-        color: #888;
-        font-size: 0.9rem;
-    }
-
-    .detail-value {
-        font-weight: 600;
-        color: #333;
-        font-size: 0.9rem;
-    }
-
-    .total .detail-value {
-        color: #2e7d32;
-        font-size: 1.1rem;
-    }
-
-    .error-message {
-        background: #ffebee;
-        padding: 1rem;
-        border-radius: 8px;
+    .divider {
+        height: 1px;
+        background: rgba(255,255,255,0.1);
         margin: 1rem 0;
-        color: #c62828;
+        border-style: dashed;
+    }
+
+    .total-row .detail-label {
+        font-size: 1.1rem;
+        color: #e2e8f0;
+    }
+
+    .total-price {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: #fff;
     }
 
     .actions {
         display: flex;
         gap: 1rem;
-        margin-top: 1.5rem;
+        margin-top: 2.5rem;
+        position: relative;
+        z-index: 1;
     }
 
-    .btn-home {
+    .btn-action {
         flex: 1;
-        padding: 12px;
-        background: #f5f5f5;
-        color: #555;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.95rem;
+        padding: 14px;
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
     }
 
-    .btn-reservations {
-        flex: 1;
-        padding: 12px;
-        background: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.95rem;
+    .primary-action {
+        background: rgba(187, 134, 252, 0.2) !important;
     }
 
-        .btn-reservations:hover {
-            background: #1b5e20;
-        }
+    /* Loading / Error States */
+    .loading-state, .error-state {
+        padding: 3rem 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+    .spinner {
+        width: 40px; height: 40px;
+        border: 3px solid rgba(255,255,255,0.1);
+        border-top-color: var(--accent-purple);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    .error-icon { font-size: 3rem; }
+    .error-state p { font-size: 1.2rem; color: #f87171; font-weight: 600; margin: 0; }
+    .error-sub { color: #94a3b8; font-size: 0.9rem; }
 </style>

@@ -1,123 +1,196 @@
 @page "/manager-dashboard"
+@using LodgeStay.Services
+@using LodgeStay.Models
 @inject NavigationManager Navigation
+@inject ReportService ReportService
+@inject RoomService RoomService
+@inject SessionService SessionService
+@inject GuestService GuestService
 
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <h2>👔 Manager Dashboard</h2>
-        <p class="welcome">Welcome back, Manager!</p>
+    <!-- ── MANAGEMENT STATS ── -->
+    <div class="top-stats-grid">
+        <div class="stat-card accent-purple">
+            <div class="stat-content">
+                <span class="stat-title">OCCUPANCY</span>
+                <span class="stat-value">@occupancyRate%</span>
+                <span class="stat-subtext">@occupiedRooms rooms occupied</span>
+            </div>
+            <div class="stat-icon">🏨</div>
+        </div>
+        <div class="stat-card accent-green">
+            <div class="stat-content">
+                <span class="stat-title">MTD REVENUE</span>
+                <span class="stat-value">Rs. @((mtdRevenue / 1000).ToString("0"))k</span>
+                <span class="stat-subtext">Month to date earnings</span>
+            </div>
+            <div class="stat-icon">💰</div>
+        </div>
+        <div class="stat-card accent-gold">
+            <div class="stat-content">
+                <span class="stat-title">LOYALTY MEMBERS</span>
+                <span class="stat-value">@loyaltyCount</span>
+                <span class="stat-subtext">Total active members</span>
+            </div>
+            <div class="stat-icon">⭐</div>
+        </div>
+        <div class="stat-card accent-blue">
+            <div class="stat-content">
+                <span class="stat-title">ECO SCORE</span>
+                <span class="stat-value">@ecoPoints</span>
+                <span class="stat-subtext">Total green points</span>
+            </div>
+            <div class="stat-icon">🌿</div>
+        </div>
     </div>
 
-    <div class="section-title">Operations</div>
-    <div class="cards-grid">
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/room-finder")'>
-            <div class="card-icon">🔍</div>
-            <h3>Room Finder</h3>
-            <p>Search and book available rooms</p>
+    <!-- ── CORE MANAGEMENT ── -->
+    <div class="section-title">
+        <span class="title-text">OPERATIONS & REVENUE</span>
+        <div class="title-line"></div>
+    </div>
+    
+    <div class="operations-grid">
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/reports")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-purple">📊</div>
+            <h3>Analytics</h3>
+            <p>Generate revenue, occupancy, and guest loyalty reports.</p>
+            <span class="op-action">→ View Reports</span>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
-            <div class="card-icon">📋</div>
-            <h3>Reservations</h3>
-            <p>View and manage all bookings</p>
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/loyalty-points")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-gold">⭐</div>
+            <h3>Loyalty Program</h3>
+            <p>Manage member tiers and reward point redemptions.</p>
+            <span class="op-action">→ Manage Loyalty</span>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/guest-profiles")'>
-            <div class="card-icon">👥</div>
-            <h3>Guest Profiles</h3>
-            <p>Manage guest information</p>
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/localdeals")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-orange">🏷️</div>
+            <h3>Partner Deals</h3>
+            <p>Configure local marketplace offers and partner prices.</p>
+            <span class="op-action">→ Edit Deals</span>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/group-booking")'>
-            <div class="card-icon">👨‍👩‍👧‍👦</div>
-            <h3>Group Booking</h3>
-            <p>Create family and group bookings</p>
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-green">📋</div>
+            <h3>Reservation Log</h3>
+            <p>Audit trail of all lodge bookings and status changes.</p>
+            <span class="op-action">→ Audit Bookings</span>
         </div>
     </div>
 
-    <div class="section-title">Management</div>
-    <div class="cards-grid">
-        <div class="dash-card accent" @onclick='() => Navigation.NavigateTo("/loyalty-points")'>
-            <div class="card-icon">⭐</div>
-            <h3>Loyalty Points</h3>
-            <p>Award and redeem guest points</p>
+    <!-- ── QUICK TOOLS ── -->
+    <div class="section-title">
+        <span class="title-text">ADMIN TOOLS</span>
+        <div class="title-line"></div>
+    </div>
+
+    <div class="quick-actions-strip">
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/notifications/settings")'>
+            <div class="qa-icon">🔔</div>
+            <div class="qa-text">
+                <span class="qa-title">Alert Rules</span>
+                <span class="qa-sub">System triggers</span>
+            </div>
         </div>
-        <div class="dash-card accent" @onclick='() => Navigation.NavigateTo("/reservations")'>
-            <div class="card-icon">📅</div>
-            <h3>Export Calendar</h3>
-            <p>Export bookings as .ics file</p>
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/guest-profiles")'>
+            <div class="qa-icon">👥</div>
+            <div class="qa-text">
+                <span class="qa-title">Guest Master</span>
+                <span class="qa-sub">Database admin</span>
+            </div>
+        </div>
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/room-finder")'>
+            <div class="qa-icon">➕</div>
+            <div class="qa-text">
+                <span class="qa-title">Direct Entry</span>
+                <span class="qa-sub">Manual booking</span>
+            </div>
         </div>
     </div>
 </div>
 
+@code {
+    private int occupiedRooms = 0;
+    private int occupancyRate = 0;
+    private double mtdRevenue = 0;
+    private int loyaltyCount = 0;
+    private int ecoPoints = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var today = DateTime.Today;
+        var monthStart = new DateTime(today.Year, today.Month, 1);
+        
+        // Stats
+        var rooms = await RoomService.GetAllRoomsAsync();
+        occupiedRooms = rooms.Count(r => r.Status != "Available");
+        occupancyRate = rooms.Count == 0 ? 0 : (occupiedRooms * 100 / rooms.Count);
+
+        var revReport = await ReportService.GetRevenueReportAsync(monthStart, today);
+        mtdRevenue = revReport.TotalRevenue;
+
+        var guests = await GuestService.GetAllGuestsAsync();
+        loyaltyCount = guests.Count;
+        ecoPoints = guests.Sum(g => g.EcoPoints);
+    }
+}
+
 <style>
-    .dashboard-container {
-        padding: 2rem;
-        max-width: 1100px;
-        margin: 0 auto;
+    .dashboard-container { 
+        padding: 1.5rem 2rem; 
+        max-width: 1300px; 
+        margin: 0 auto; 
+        color: #e2e8f0;
     }
 
-    .dashboard-header {
-        margin-bottom: 2rem;
-    }
+    .top-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+    .stat-card { background: #13181f; border-radius: 12px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: flex-start; border: 1px solid rgba(255,255,255,0.05); border-top: 3px solid transparent; transition: all 0.3s ease; }
+    .stat-card:hover { transform: translateY(-5px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    
+    .stat-card.accent-purple { border-top-color: #a78bfa; }
+    .stat-card.accent-green { border-top-color: #10b981; }
+    .stat-card.accent-gold { border-top-color: #fbbf24; }
+    .stat-card.accent-blue { border-top-color: #3b82f6; }
+    
+    .stat-content { display: flex; flex-direction: column; }
+    .stat-title { font-size: 0.75rem; font-weight: 600; color: #64748b; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.5rem; }
+    .stat-subtext { font-size: 0.8rem; color: #94a3b8; }
+    .stat-icon { font-size: 1.5rem; opacity: 0.8; }
 
-    h2 {
-        color: #2e7d32;
-    }
+    .section-title { display: flex; align-items: center; gap: 1rem; margin: 2.5rem 0 1.5rem; }
+    .title-text { font-size: 0.8rem; font-weight: 700; color: #64748b; letter-spacing: 1.5px; }
+    .title-line { flex: 1; height: 1px; background: rgba(255,255,255,0.05); }
 
-    .welcome {
-        color: #888;
-        font-size: 0.95rem;
-    }
+    .operations-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; }
+    .op-card { background: #13181f; border-radius: 12px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); cursor: pointer; position: relative; overflow: hidden; transition: all 0.3s ease; display: flex; flex-direction: column; }
+    .card-accent-bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--accent-purple); opacity: 0; transition: opacity 0.3s ease; }
+    .op-card:hover { transform: scale(1.03) translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.5); border-color: rgba(187, 134, 252, 0.3); }
+    .op-card:hover .card-accent-bar { opacity: 1; }
 
-    .section-title {
-        font-size: 0.85rem;
-        font-weight: 700;
-        color: #888;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin: 1.5rem 0 1rem;
-    }
+    .op-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1.2rem; }
+    .bg-purple { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+    .bg-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .bg-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .bg-gold { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .bg-orange { background: rgba(249, 115, 22, 0.15); color: #f97316; }
 
-    .cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 1rem;
-    }
+    .op-card h3 { color: #fff; margin: 0 0 0.5rem; font-size: 1.1rem; }
+    .op-card p { color: #64748b; font-size: 0.85rem; line-height: 1.4; margin: 0 0 1.5rem; flex: 1; }
+    .op-action { font-size: 0.85rem; color: #475569; font-weight: 600; transition: color 0.3s ease; }
+    .op-card:hover .op-action { color: var(--accent-purple); }
 
-    .dash-card {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        text-align: center;
-        cursor: pointer;
-        transition: transform 0.2s;
-        border-top: 4px solid #2e7d32;
-    }
+    .quick-actions-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+    .qa-item { background: #13181f; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: background 0.2s; }
+    .qa-item:hover { background: rgba(255,255,255,0.03); }
+    .qa-icon { font-size: 1.3rem; }
+    .qa-text { display: flex; flex-direction: column; }
+    .qa-title { color: #fff; font-weight: 600; font-size: 0.9rem; }
+    .qa-sub { color: #64748b; font-size: 0.8rem; }
 
-        .dash-card.accent {
-            border-top-color: #1565c0;
-        }
-
-        .dash-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-        }
-
-    .card-icon {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-    }
-
-    h3 {
-        color: #2e7d32;
-        margin-bottom: 0.5rem;
-    }
-
-    .dash-card.accent h3 {
-        color: #1565c0;
-    }
-
-    p {
-        color: #888;
-        font-size: 0.9rem;
-    }
+    @@media (max-width: 1024px) { .top-stats-grid, .operations-grid, .quick-actions-strip { grid-template-columns: repeat(2, 1fr); } }
+    @@media (max-width: 600px) { .top-stats-grid, .operations-grid, .quick-actions-strip { grid-template-columns: 1fr; } }
 </style>

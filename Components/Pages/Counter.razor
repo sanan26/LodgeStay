@@ -1,16 +1,162 @@
-﻿@page "/counter"
+@page "/counter"
 
-<h1>Counter</h1>
+<div class="counter-root">
+    <div class="glass-panel counter-card">
+        <div class="card-header">
+            <span class="badge">INTERACTIVE COMPONENT</span>
+            <h1>Pulse Counter</h1>
+            <p>A demonstration of Blazor's real-time state management.</p>
+        </div>
 
-<p role="status">Current count: @currentCount</p>
+        <div class="counter-display">
+            <div class="glow-ring"></div>
+            <div class="value-container">
+                <span class="count-value @pulseClass">@currentCount</span>
+            </div>
+        </div>
 
-<button class="btn btn-primary" @onclick="IncrementCount">Click me</button>
+        <div class="actions">
+            <button class="btn-increment" @onclick="IncrementCount">
+                <span class="icon">⚡</span> Amplify
+            </button>
+            <button class="btn-reset" @onclick="ResetCount">Reset</button>
+        </div>
+
+        <div class="history">
+            <span class="h-lbl">Session Intensity</span>
+            <div class="intensity-bar">
+                <div class="fill" style="width: @(Math.Min(currentCount * 5, 100))%"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
 @code {
     private int currentCount = 0;
+    private string pulseClass = "";
 
-    private void IncrementCount()
+    private async Task IncrementCount()
     {
         currentCount++;
+        pulseClass = "pulse-anim";
+        await Task.Delay(300);
+        pulseClass = "";
+    }
+
+    private void ResetCount()
+    {
+        currentCount = 0;
     }
 }
+
+<style>
+    .counter-root { 
+        min-height: 100vh; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        background: radial-gradient(circle at center, rgba(187, 134, 252, 0.05) 0%, transparent 70%);
+        color: #fff;
+    }
+
+    .counter-card { 
+        width: 100%; 
+        max-width: 400px; 
+        padding: 3rem !important; 
+        text-align: center; 
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
+    .badge { 
+        display: inline-block; 
+        font-size: 0.65rem; 
+        font-weight: 800; 
+        letter-spacing: 2px; 
+        color: var(--accent-purple); 
+        background: rgba(187, 134, 252, 0.1); 
+        padding: 4px 12px; 
+        border-radius: 50px; 
+        margin-bottom: 1.5rem; 
+    }
+
+    h1 { font-size: 2.2rem; font-weight: 800; margin-bottom: 0.5rem; color: #fff; }
+    p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; margin-bottom: 3rem; }
+
+    .counter-display { 
+        position: relative; 
+        width: 180px; 
+        height: 180px; 
+        margin: 0 auto 3rem auto; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+    }
+
+    .glow-ring { 
+        position: absolute; 
+        inset: 0; 
+        border: 2px solid rgba(187, 134, 252, 0.2); 
+        border-radius: 50%; 
+        box-shadow: inset 0 0 30px rgba(187, 134, 252, 0.1);
+        animation: rotate 10s linear infinite;
+    }
+    .glow-ring::after {
+        content: '';
+        position: absolute;
+        top: -5px; left: 50%;
+        width: 10px; height: 10px;
+        background: var(--accent-purple);
+        border-radius: 50%;
+        box-shadow: 0 0 15px var(--accent-purple);
+    }
+
+    @@keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .count-value { 
+        font-size: 5rem; 
+        font-weight: 900; 
+        font-family: 'JetBrains Mono', monospace; 
+        color: #fff; 
+        text-shadow: 0 0 20px rgba(255,255,255,0.2);
+        transition: all 0.2s;
+    }
+    .pulse-anim { transform: scale(1.2); color: var(--accent-purple); text-shadow: 0 0 40px var(--accent-purple); }
+
+    .actions { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem; }
+    
+    .btn-increment { 
+        padding: 1.2rem; 
+        background: var(--accent-purple); 
+        color: #000; 
+        border: none; 
+        border-radius: 16px; 
+        font-size: 1.2rem; 
+        font-weight: 800; 
+        cursor: pointer; 
+        transition: all 0.2s; 
+        display: flex; 
+        justify-content: center; 
+        align-items: center; 
+        gap: 10px;
+        box-shadow: 0 10px 20px rgba(187, 134, 252, 0.2);
+    }
+    .btn-increment:hover { transform: scale(1.03); background: #9d4edd; box-shadow: 0 15px 30px rgba(187, 134, 252, 0.4); }
+    .btn-increment:active { transform: scale(0.97); }
+
+    .btn-reset { 
+        background: transparent; 
+        border: 1px solid rgba(255,255,255,0.1); 
+        color: #64748b; 
+        padding: 0.8rem; 
+        border-radius: 12px; 
+        cursor: pointer; 
+        font-weight: 600; 
+        transition: all 0.2s; 
+    }
+    .btn-reset:hover { color: #fff; background: rgba(255,255,255,0.05); }
+
+    .history { text-align: left; }
+    .h-lbl { font-size: 0.75rem; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .intensity-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; }
+    .fill { height: 100%; background: linear-gradient(to right, var(--accent-purple), #03dac6); transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+</style>

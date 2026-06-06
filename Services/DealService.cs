@@ -1,4 +1,4 @@
-﻿using LodgeStay.Data;
+using LodgeStay.Data;
 using LodgeStay.Models;
 
 namespace LodgeStay.Services
@@ -90,10 +90,16 @@ namespace LodgeStay.Services
 
         public async Task<(bool Success, string Message)> AttachDealsToReservationAsync(int reservationId, List<int> dealIds)
         {
-            // Deals are stored against the reservation as a reference
-            // Extend with a ReservationDeals join table if needed
             if (dealIds == null || dealIds.Count == 0)
                 return (false, "No deals selected.");
+
+            var reservation = await _db.GetReservationByIdAsync(reservationId);
+            if (reservation == null)
+                return (false, "Reservation not found.");
+
+            // Store as comma-separated IDs
+            reservation.AttachedDeals = string.Join(",", dealIds);
+            await _db.SaveReservationAsync(reservation);
 
             return (true, $"{dealIds.Count} deal(s) attached to reservation.");
         }

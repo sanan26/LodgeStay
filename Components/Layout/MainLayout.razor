@@ -1,16 +1,177 @@
 @inherits LayoutComponentBase
+@implements IDisposable
+@using LodgeStay.Services
+@using Microsoft.AspNetCore.Components.Routing
+@inject SessionService SessionService
+@inject NavigationManager NavigationManager
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-        <article class="content px-4">
+<div class="app-container">
+    <div class="global-glow-bg"></div>
+    
+    @if (SessionService.IsloggedIn && !NavigationManager.Uri.Contains("booking-confirmation", StringComparison.OrdinalIgnoreCase))
+    {
+        <header class="main-header glass-panel dark-premium">
+            <div class="header-container">
+                <!-- 1. BRAND & CONTEXT -->
+                <div class="header-left">
+                    <div class="brand-wrapper" @onclick='() => NavigationManager.NavigateTo("/")'>
+                        <span class="brand-logotype">LS</span>
+                    </div>
+                </div>
+
+                <!-- 2. SCROLLABLE NAV & ACTIONS -->
+                <div class="header-scroll-wrapper">
+                    <div class="header-center">
+                        <nav class="header-nav">
+                            <NavMenu />
+                        </nav>
+                    </div>
+
+                    <div class="header-right">
+                        <div class="header-actions">
+                            <button class="btn-quick-action" @onclick='() => NavigationManager.NavigateTo("/room-finder")'>
+                                <span>ADD</span>
+                            </button>
+                        </div>
+
+                        <div class="user-profile-brief">
+                            <div class="avatar-mini">@SessionService.CurrentUser?.Name.Substring(0,1).ToUpper()</div>
+                            <div class="user-meta-top">
+                                <span class="u-name">@SessionService.CurrentUser?.Name.Split(' ')[0]</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+    }
+
+    <main class="main-content @(SessionService.IsloggedIn ? "with-header" : "")">
+        <article class="content px-4 pb-5 mb-5">
             @Body
         </article>
     </main>
 </div>
+
 <NotificationBanner />
+
+@code {
+    private string CurrentPageTitle => GetTitleFromUri(NavigationManager.Uri);
+
+    protected override void OnInitialized()
+    {
+        SessionService.OnChange += StateHasChanged;
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private string GetTitleFromUri(string uri)
+    {
+        var path = NavigationManager.ToBaseRelativePath(uri).Split('?')[0].ToLower();
+        if (string.IsNullOrEmpty(path)) return "Home Portal";
+        
+        return path switch
+        {
+            "room-finder" => "Room Management",
+            "reservations" => "Booking Registry",
+            "guest-profiles" => "Guest Database",
+            "group-booking" => "Group Folios",
+            "ecostay" => "Sustainability Hub",
+            "concierge" => "Guest Services",
+            "loyalty-points" => "Loyalty & Tiers",
+            "reports" => "Operational Intelligence",
+            "localdeals" => "Partner Offers",
+            "dashboard" => "Performance Hub",
+            "owner-dashboard" => "Owner Command Center",
+            "manager-dashboard" => "Manager Dashboard",
+            "staff-dashboard" => "Operations Hub",
+            "notifications/settings" => "System Alerts",
+            _ => "LodgeStay Admin"
+        };
+    }
+
+    public void Dispose()
+    {
+        SessionService.OnChange -= StateHasChanged;
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}
+
+<style>
+    .app-container { display: flex; flex-direction: column; min-height: 100vh; }
+    
+    .main-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 64px;
+        z-index: 1000;
+        padding: 0 2rem !important;
+        display: flex;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.8) !important;
+        backdrop-filter: blur(20px) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+        box-shadow: 0 4px 30px rgba(0,0,0,0.4) !important;
+    }
+
+    .dark-premium {
+        background: rgba(15, 23, 42, 0.95) !important; /* Deep Slate background like Group/Reports */
+        backdrop-filter: blur(20px) !important;
+    }
+
+    .header-container { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+
+    .header-left { flex-shrink: 0; }
+    .brand-wrapper { cursor: pointer; transition: opacity 0.2s; }
+    .brand-logotype { font-size: 1.4rem; font-weight: 900; color: #fff; letter-spacing: -1px; text-transform: uppercase; }
+    
+    /* The Swipe Power */
+    .header-scroll-wrapper { 
+        flex: 1; 
+        display: flex; 
+        align-items: center; 
+        gap: 1.5rem; 
+        overflow-x: auto; 
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE/Edge */
+        padding: 4px 0;
+    }
+    .header-scroll-wrapper::-webkit-scrollbar { display: none; /* Chrome/Safari */ }
+
+    .header-center { flex-shrink: 0; }
+    .header-nav { display: flex; align-items: center; }
+
+    .header-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
+    
+    .header-actions { display: flex; align-items: center; gap: 0.6rem; }
+    
+    .btn-quick-action {
+        background: var(--accent-purple) !important;
+        color: #000 !important;
+        border: none !important;
+        padding: 6px 14px !important;
+        border-radius: 8px !important;
+        font-weight: 900 !important;
+        font-size: 0.7rem !important;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .user-profile-brief { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+    .avatar-mini { width: 24px; height: 24px; background: #1e1b4b; color: #fff; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 0.65rem; border: 1px solid rgba(255,255,255,0.1); }
+    .u-name { font-size: 0.7rem; font-weight: 800; color: #fff; text-transform: uppercase; white-space: nowrap; }
+
+    .main-content { transition: padding-top 0.3s; }
+    .main-content.with-header { padding-top: 80px; }
+
+    @@media (max-width: 600px) {
+        .main-header { padding: 0 1rem !important; }
+        .header-scroll-wrapper { gap: 1rem; }
+    }
+</style>

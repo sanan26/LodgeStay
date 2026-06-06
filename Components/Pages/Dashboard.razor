@@ -9,91 +9,131 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<div class="page-container">
-
+<div class="dashboard-root">
     @if (!isAuthorized)
     {
-        <div class="alert alert-warning">You must be logged in as Manager or Owner to view this page.</div>
+        <div class="glass-panel alert-box">
+            <span class="icon">🔒</span>
+            <div class="content">
+                <h3>Access Restricted</h3>
+                <p>You must be logged in as Manager or Owner to view the occupancy analytics.</p>
+            </div>
+        </div>
     }
     else
     {
-        <div class="page-header">
-            <h2 class="page-title">📊 Occupancy Dashboard</h2>
-            <span class="refresh-badge">Auto-refresh in @refreshCountdown s</span>
-        </div>
-
         @if (isLoading)
         {
-            <div class="loading-spinner">
-                <div class="spinner"></div>
-                <p>Loading dashboard...</p>
+            <div class="dash-loader">
+                <div class="nexus-spinner"></div>
+                <p>Synthesizing Data...</p>
             </div>
         }
         else
         {
-            <div class="summary-grid">
-                <div class="summary-card occupancy-card">
-                    <div class="card-icon">🏨</div>
-                    <div class="card-body">
-                        <div class="card-value">@OccupancyPercent%</div>
-                        <div class="card-label">Occupancy Rate</div>
-                        <div class="card-sub">@occupiedRooms / @totalRooms rooms occupied</div>
+            <div class="main-stats-layout">
+                <!-- HERO GAUGE SECTION -->
+                <div class="glass-panel hero-section">
+                    <div class="gauge-container">
+                        <svg class="occupancy-gauge" viewBox="0 0 100 100">
+                            <circle class="gauge-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="gauge-fill" cx="50" cy="50" r="45" 
+                                    style="stroke-dasharray: @(OccupancyPercent * 2.827) 282.7"></circle>
+                        </svg>
+                        <div class="gauge-content">
+                            <span class="g-val">@OccupancyPercent%</span>
+                            <span class="g-lbl">Full</span>
+                        </div>
+                    </div>
+                    <div class="hero-info">
+                        <div class="stat-mini">
+                            <span class="s-val">@occupiedRooms</span>
+                            <span class="s-lbl">Occupied</span>
+                        </div>
+                        <div class="stat-divider"></div>
+                        <div class="stat-mini">
+                            <span class="s-val">@(totalRooms - occupiedRooms)</span>
+                            <span class="s-lbl">Available</span>
+                        </div>
                     </div>
                 </div>
 
-                <div class="summary-card checkin-card">
-                    <div class="card-icon">✅</div>
-                    <div class="card-body">
-                        <div class="card-value">@todayCheckIns</div>
-                        <div class="card-label">Check-ins Today</div>
+                <!-- QUICK STATS GRID -->
+                <div class="stats-grid">
+                    <div class="glass-panel stat-card checkin">
+                        <div class="sc-top">
+                            <span class="sc-icon">📥</span>
+                            <span class="sc-trend up">↑</span>
+                        </div>
+                        <div class="sc-body">
+                            <span class="sc-val">@todayCheckIns</span>
+                            <span class="sc-lbl">Arrivals Today</span>
+                        </div>
                     </div>
-                </div>
 
-                <div class="summary-card checkout-card">
-                    <div class="card-icon">🚪</div>
-                    <div class="card-body">
-                        <div class="card-value">@todayCheckOuts</div>
-                        <div class="card-label">Check-outs Today</div>
+                    <div class="glass-panel stat-card checkout">
+                        <div class="sc-top">
+                            <span class="sc-icon">📤</span>
+                            <span class="sc-trend">→</span>
+                        </div>
+                        <div class="sc-body">
+                            <span class="sc-val">@todayCheckOuts</span>
+                            <span class="sc-lbl">Departures Today</span>
+                        </div>
                     </div>
-                </div>
 
-                <div class="summary-card revenue-card">
-                    <div class="card-icon">💰</div>
-                    <div class="card-body">
-                        <div class="card-value">PKR @monthRevenue.ToString("N0")</div>
-                        <div class="card-label">Revenue This Month</div>
+                    <div class="glass-panel stat-card revenue">
+                        <div class="sc-top">
+                            <span class="sc-icon">💰</span>
+                            <span class="sc-trend up">↑</span>
+                        </div>
+                        <div class="sc-body">
+                            <span class="sc-val">Rs. @monthRevenue.ToString("N0")</span>
+                            <span class="sc-lbl">Month-to-Date</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             @if (showLowOccupancyAlert)
             {
-                <div class="alert alert-warning alert-dismissible">
-                    ⚠️ <strong>Low Occupancy Alert:</strong> Occupancy is below 30%. Consider offering walk-in discounts.
-                    <button class="dismiss-btn" @onclick="() => showLowOccupancyAlert = false">✕</button>
+                <div class="glass-panel banner-alert">
+                    <div class="alert-content">
+                        <span class="alert-icon">⚠️</span>
+                        <div class="alert-text">
+                            <strong>Low Capacity Alert: @OccupancyPercent%</strong>
+                            <p>Occupancy has dipped below 30%. Dynamic pricing or local promos suggested.</p>
+                        </div>
+                    </div>
+                    <button class="btn-dismiss" @onclick="() => showLowOccupancyAlert = false">✕</button>
                 </div>
             }
 
-            <div class="section-header">
-                <h3>Room Status</h3>
-                <div class="legend">
-                    <span class="legend-item available">Available</span>
-                    <span class="legend-item reserved">Reserved</span>
-                    <span class="legend-item occupied">Occupied</span>
-                    <span class="legend-item maintenance">Maintenance</span>
-                </div>
-            </div>
-
-            <div class="room-grid">
-                @foreach (var room in rooms)
-                {
-                    <div class="room-tile @GetRoomStatusClass(room.Status)">
-                        <div class="room-number">@room.RoomNo</div>
-                        <div class="room-type">@room.Room_Type</div>
-                        <div class="room-status-label">@room.Status</div>
-                        <div class="room-price">PKR @room.Price/night</div>
+            <!-- ROOM GRID SECTION -->
+            <div class="rooms-section">
+                <div class="section-top">
+                    <h3 class="section-title">Floor Layout & Status</h3>
+                    <div class="legend-pills">
+                        <span class="l-pill av">Available</span>
+                        <span class="l-pill re">Reserved</span>
+                        <span class="l-pill oc">Occupied</span>
+                        <span class="l-pill ma">Maint.</span>
                     </div>
-                }
+                </div>
+
+                <div class="hex-grid">
+                    @foreach (var room in rooms)
+                    {
+                        <div class="room-hex-card @GetRoomStatusClass(room.Status)">
+                            <div class="rh-glow"></div>
+                            <div class="rh-content">
+                                <span class="rh-no">@room.RoomNo</span>
+                                <span class="rh-type">@room.Room_Type</span>
+                                <div class="rh-status-tag">@room.Status</div>
+                            </div>
+                        </div>
+                    }
+                </div>
             </div>
         }
     }
@@ -110,8 +150,6 @@
     private int occupiedRooms = 0;
     private int OccupancyPercent => totalRooms == 0 ? 0 : (int)Math.Round((double)occupiedRooms / totalRooms * 100);
 
-    // FIX: OccupancyReport has no TodayCheckIns/TodayCheckOuts/MonthRevenue.
-    // Derive these directly from the reservations list and revenue report.
     private int todayCheckIns = 0;
     private int todayCheckOuts = 0;
     private double monthRevenue = 0;
@@ -151,23 +189,25 @@
         var today = DateTime.Today;
         var monthStart = new DateTime(today.Year, today.Month, 1);
 
-        // Occupancy report for this month — use Reservations list to derive counts
-        var occupancyReport = await ReportService.GetOccupancyReportAsync(monthStart, today);
-        todayCheckIns  = occupancyReport.Reservations.Count(r => r.CheckIn.Date  == today);
-        todayCheckOuts = occupancyReport.Reservations.Count(r => r.CheckOut.Date == today);
+        try {
+            var occupancyReport = await ReportService.GetOccupancyReportAsync(monthStart, today);
+            todayCheckIns  = occupancyReport.Reservations.Count(r => r.CheckIn.Date  == today);
+            todayCheckOuts = occupancyReport.Reservations.Count(r => r.CheckOut.Date == today);
 
-        // Revenue report for this month
-        var revenueReport = await ReportService.GetRevenueReportAsync(monthStart, today);
-        monthRevenue = revenueReport.TotalRevenue;
+            var revenueReport = await ReportService.GetRevenueReportAsync(monthStart, today);
+            monthRevenue = revenueReport.TotalRevenue;
 
-        rooms = await RoomService.GetAllRoomsAsync();
-        totalRooms    = rooms.Count;
-        occupiedRooms = rooms.Count(r => r.Status == "Occupied" || r.Status == "Reserved");
+            rooms = await RoomService.GetAllRoomsAsync();
+            totalRooms    = rooms.Count;
+            occupiedRooms = rooms.Count(r => r.Status == "Occupied" || r.Status == "Reserved");
 
-        if (OccupancyPercent < 30)
-        {
-            showLowOccupancyAlert = true;
-            await NotificationService.SendOccupancyAlertAsync(OccupancyPercent);
+            if (OccupancyPercent < 30)
+            {
+                showLowOccupancyAlert = true;
+                await NotificationService.SendOccupancyAlertAsync(OccupancyPercent);
+            }
+        } catch {
+            // Silently fail if report service has no data
         }
 
         isLoading = false;
@@ -176,10 +216,10 @@
 
     private string GetRoomStatusClass(string status) => status switch
     {
-        "Available"   => "status-available",
-        "Reserved"    => "status-reserved",
-        "Occupied"    => "status-occupied",
-        "Maintenance" => "status-maintenance",
+        "Available"   => "s-available",
+        "Reserved"    => "s-reserved",
+        "Occupied"    => "s-occupied",
+        "Maintenance" => "s-maintenance",
         _             => ""
     };
 
@@ -190,51 +230,107 @@
 }
 
 <style>
-    .page-container { padding: 1rem; max-width: 1100px; margin: 0 auto; }
+    .dashboard-root { padding: 2rem; max-width: 1300px; margin: 0 auto; color: #e2e8f0; font-family: 'Inter', sans-serif; }
 
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-    .page-title { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; margin: 0; }
-    .refresh-badge { font-size: 0.75rem; background: #e8f4fd; color: #2e75b6; padding: 4px 10px; border-radius: 12px; }
+    /* Header */
+    .dash-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2.5rem; }
+    .dash-title { font-size: 2.2rem; font-weight: 800; color: #fff; margin: 0; letter-spacing: -1px; }
+    .header-main { display: flex; align-items: baseline; gap: 1rem; }
+    .live-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; font-weight: 700; color: #10b981; letter-spacing: 1px; }
+    .live-indicator .dot { width: 8px; height: 8px; background: #10b981; border-radius: 50%; animation: pulse 1.5s infinite; }
+    @@keyframes pulse { 0% { opacity: 0.5; box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { opacity: 1; box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); } 100% { opacity: 0.5; } }
+    
+    .refresh-pill { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 0.6rem 1.2rem; border-radius: 50px; font-size: 0.85rem; color: #94a3b8; }
+    .refresh-pill strong { color: #fff; margin: 0 2px; }
 
-    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .summary-card { background: #fff; border-radius: 12px; padding: 1.2rem; display: flex; align-items: center; gap: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #2e75b6; }
-    .occupancy-card { border-left-color: #2e75b6; }
-    .checkin-card   { border-left-color: #28a745; }
-    .checkout-card  { border-left-color: #fd7e14; }
-    .revenue-card   { border-left-color: #6f42c1; }
-    .card-icon  { font-size: 2rem; }
-    .card-value { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; }
-    .card-label { font-size: 0.8rem; color: #666; }
-    .card-sub   { font-size: 0.75rem; color: #999; margin-top: 2px; }
+    /* Layout */
+    .main-stats-layout { display: grid; grid-template-columns: 400px 1fr; gap: 2rem; margin-bottom: 2rem; }
 
-    .alert { padding: 0.85rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
-    .alert-warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
-    .dismiss-btn { margin-left: auto; background: none; border: none; cursor: pointer; font-size: 1rem; color: #856404; }
+    /* Hero Section */
+    .hero-section { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 3rem; background: radial-gradient(circle at center, rgba(187, 134, 252, 0.1) 0%, transparent 80%); }
+    .gauge-container { position: relative; width: 220px; height: 220px; margin-bottom: 2rem; }
+    .occupancy-gauge { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .gauge-bg { fill: none; stroke: rgba(255,255,255,0.05); stroke-width: 8; }
+    .gauge-fill { fill: none; stroke: var(--accent-purple); stroke-width: 8; stroke-linecap: round; transition: stroke-dasharray 1.5s ease-out; filter: drop-shadow(0 0 8px var(--accent-purple)); }
+    
+    .gauge-content { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .g-val { font-size: 3.2rem; font-weight: 800; color: #fff; line-height: 1; }
+    .g-lbl { font-size: 1rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
 
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-    .section-header h3 { font-size: 1.1rem; font-weight: 600; color: #1a1a2e; margin: 0; }
+    .hero-info { display: flex; gap: 2.5rem; align-items: center; width: 100%; justify-content: center; }
+    .stat-mini { text-align: center; }
+    .s-val { display: block; font-size: 1.5rem; font-weight: 700; color: #fff; }
+    .s-lbl { font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-divider { width: 1px; height: 40px; background: rgba(255,255,255,0.1); }
 
-    .legend { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-    .legend-item { font-size: 0.75rem; padding: 3px 10px; border-radius: 10px; font-weight: 500; }
-    .legend-item.available   { background: #d4edda; color: #155724; }
-    .legend-item.reserved    { background: #cce5ff; color: #004085; }
-    .legend-item.occupied    { background: #f8d7da; color: #721c24; }
-    .legend-item.maintenance { background: #fff3cd; color: #856404; }
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-rows: repeat(3, 1fr); gap: 1rem; }
+    .stat-card { display: flex; flex-direction: column; justify-content: space-between; padding: 1.5rem; border-left: 4px solid transparent; transition: all 0.3s ease; }
+    .stat-card:hover { transform: translateX(10px); background: rgba(255,255,255,0.03); }
+    
+    .checkin { border-left-color: #03dac6; }
+    .checkout { border-left-color: #cf6679; }
+    .revenue { border-left-color: #fbbf24; }
+    
+    .sc-top { display: flex; justify-content: space-between; align-items: center; }
+    .sc-icon { font-size: 1.8rem; }
+    .sc-trend { font-weight: 800; font-size: 1.1rem; }
+    .sc-trend.up { color: #10b981; }
+    
+    .sc-body { margin-top: 1rem; }
+    .sc-val { display: block; font-size: 1.8rem; font-weight: 800; color: #fff; }
+    .sc-lbl { font-size: 0.85rem; color: #94a3b8; }
 
-    .room-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.85rem; }
-    .room-tile { border-radius: 10px; padding: 0.85rem; text-align: center; transition: transform 0.15s; cursor: default; }
-    .room-tile:hover { transform: translateY(-2px); }
-    .room-number { font-size: 1.1rem; font-weight: 700; }
-    .room-type   { font-size: 0.7rem; color: #555; margin: 2px 0; }
-    .room-status-label { font-size: 0.7rem; font-weight: 600; margin-top: 4px; }
-    .room-price  { font-size: 0.65rem; color: #888; margin-top: 2px; }
+    /* Alert Banner */
+    .banner-alert { display: flex; justify-content: space-between; align-items: center; padding: 1.2rem 2rem; border-left: 6px solid #fcd34d; background: rgba(252, 211, 77, 0.05); margin-bottom: 2rem; border-radius: 12px; }
+    .alert-content { display: flex; align-items: center; gap: 1.5rem; }
+    .alert-icon { font-size: 2rem; }
+    .alert-text strong { display: block; color: #fcd34d; font-size: 1.1rem; margin-bottom: 2px; }
+    .alert-text p { margin: 0; color: #fde68a; font-size: 0.9rem; }
+    .btn-dismiss { background: transparent; border: none; color: #fde68a; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.5; transition: opacity 0.2s; }
+    .btn-dismiss:hover { opacity: 1; }
 
-    .status-available   { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
-    .status-reserved    { background: #cce5ff; border: 1px solid #b8daff; color: #004085; }
-    .status-occupied    { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
-    .status-maintenance { background: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+    /* Room Grid Section */
+    .section-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+    .section-title { font-size: 1.3rem; font-weight: 700; color: #fff; margin: 0; }
+    
+    .legend-pills { display: flex; gap: 0.8rem; }
+    .l-pill { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); color: #94a3b8; }
+    .l-pill.av { color: #03dac6; border-color: rgba(3, 218, 198, 0.3); }
+    .l-pill.re { color: var(--accent-purple); border-color: rgba(187, 134, 252, 0.3); }
+    .l-pill.oc { color: #cf6679; border-color: rgba(207, 102, 121, 0.3); }
+    .l-pill.ma { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
 
-    .loading-spinner { text-align: center; padding: 3rem; color: #666; }
-    .spinner { width: 36px; height: 36px; border: 4px solid #e0e0e0; border-top-color: #2e75b6; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 1rem; }
+    /* Hex Grid Layout */
+    .hex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1.2rem; }
+    
+    .room-hex-card { position: relative; background: #13181f; border-radius: 20px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); overflow: hidden; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default; }
+    .room-hex-card:hover { transform: translateY(-5px) scale(1.02); z-index: 10; border-color: rgba(255,255,255,0.2); }
+    
+    .rh-glow { position: absolute; inset: 0; background: radial-gradient(circle at top, var(--room-color) 0%, transparent 60%); opacity: 0; transition: opacity 0.4s ease; }
+    .room-hex-card:hover .rh-glow { opacity: 0.15; }
+    
+    .s-available { --room-color: #03dac6; border-bottom: 4px solid #03dac6; }
+    .s-reserved  { --room-color: var(--accent-purple); border-bottom: 4px solid var(--accent-purple); }
+    .s-occupied  { --room-color: #cf6679; border-bottom: 4px solid #cf6679; }
+    .s-maintenance { --room-color: #fbbf24; border-bottom: 4px solid #fbbf24; }
+
+    .rh-content { position: relative; z-index: 1; text-align: center; }
+    .rh-no { display: block; font-size: 1.8rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.4rem; }
+    .rh-type { display: block; font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem; }
+    .rh-status-tag { display: inline-block; font-size: 0.7rem; font-weight: 800; padding: 3px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: var(--room-color); border: 1px solid var(--room-color); }
+
+    /* Loader */
+    .dash-loader { text-align: center; padding: 10rem 0; }
+    .nexus-spinner { width: 60px; height: 60px; border: 4px solid rgba(187, 134, 252, 0.1); border-top-color: var(--accent-purple); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 1.5rem; filter: drop-shadow(0 0 10px var(--accent-purple)); }
     @@keyframes spin { to { transform: rotate(360deg); } }
+
+    @@media (max-width: 1024px) {
+        .main-stats-layout { grid-template-columns: 1fr; }
+        .stats-grid { grid-template-columns: repeat(3, 1fr); grid-template-rows: auto; }
+        .stat-card:hover { transform: translateY(-5px); }
+    }
+    @@media (max-width: 768px) {
+        .stats-grid { grid-template-columns: 1fr; }
+    }
 </style>

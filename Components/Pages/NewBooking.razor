@@ -4,51 +4,127 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
 @inject ReservationService ReservationService
+@inject GuestService GuestService
+@inject RoomService RoomService
 
 <div class="booking-container">
-    <div class="page-header">
-        <button class="btn-back" @onclick="GoBack">← Back</button>
-        <h2>📋 New Booking</h2>
+    <div class="step-indicator">
+        <div class="step completed">
+            <div class="step-circle">✓</div>
+            <span>Room</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step active">
+            <div class="step-circle">2</div>
+            <span>Guest & Dates</span>
+        </div>
+        <div class="step-line"></div>
+        <div class="step">
+            <div class="step-circle">3</div>
+            <span>Confirm</span>
+        </div>
     </div>
 
-    <div class="booking-form">
-        <h3>Guest Details</h3>
-        <div class="form-group">
-            <label>Guest Name</label>
-            <input type="text" @bind="guestName" placeholder="Enter guest name" />
+    <div class="booking-form-card">
+        
+        <div class="section-header">
+            <div class="section-icon">👤</div>
+            <h3>GUEST DETAILS</h3>
         </div>
-        <div class="form-group">
-            <label>Guest Email</label>
-            <input type="email" @bind="guestEmail" placeholder="Enter guest email" />
-        </div>
-        <div class="form-group">
-            <label>Guest Phone</label>
-            <input type="text" @bind="guestPhone" placeholder="Enter guest phone" />
-        </div>
-
-        <h3>Booking Details</h3>
-        <div class="form-group">
-            <label>Check-in Date</label>
-            <input type="date"
-                   value="@checkIn.ToString("yyyy-MM-dd")"
-                   min="@DateTime.Now.ToString("yyyy-MM-dd")"
-                   @onchange="OnCheckInChanged" />
-        </div>
-        <div class="form-group">
-            <label>Check-out Date</label>
-            <input type="date"
-                   @bind="checkOut"
-                   @bind:format="yyyy-MM-dd"
-                   min="@checkIn.AddDays(1).ToString("yyyy-MM-dd")" />
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label>GUEST EMAIL (Search existing)</label>
+                <div class="input-with-lookup">
+                    <input type="email" @bind="guestEmail" @bind:event="oninput" @onkeyup="AutoLookupGuest" placeholder="Enter guest email" />
+                    @if (isSearching) { <div class="searching-dots">...</div> }
+                </div>
+            </div>
+            <div class="form-group">
+                <label>GUEST NAME</label>
+                <input type="text" @bind="guestName" placeholder="Enter guest name" />
+            </div>
+            <div class="form-group">
+                <label>GUEST PHONE</label>
+                <input type="text" @bind="guestPhone" placeholder="Enter guest phone" />
+            </div>
+            <div class="form-group">
+                <label>NUMBER OF GUESTS</label>
+                <input type="number" @bind="guests" min="1" max="@(room?.Capacity ?? 4)" />
+            </div>
         </div>
 
-       
+        @if (foundGuest != null)
+        {
+            <div class="guest-found-badge">
+                <span class="icon">✨</span> Recognized <strong>@foundGuest.Tier Member</strong>. Profile auto-filled.
+            </div>
+        }
 
-        <div class="room-summary">
-            <h3>Selected Room</h3>
-            <p>🛏️ Room @RoomId</p>
-            <p>📅 Total nights: @totalNights</p>
-            <p class="total-price">Total: Rs. @(totalNights * 5000)</p>
+        <div class="section-divider"></div>
+
+        <div class="section-header">
+            <div class="section-icon">📅</div>
+            <h3>BOOKING DETAILS</h3>
+        </div>
+
+        <div class="form-grid">
+            <div class="form-group">
+                <label>CHECK-IN DATE</label>
+                <input type="date"
+                       value="@checkIn.ToString("yyyy-MM-dd")"
+                       min="@DateTime.Now.ToString("yyyy-MM-dd")"
+                       @onchange="OnCheckInChanged" />
+            </div>
+            <div class="form-group">
+                <label>CHECK-OUT DATE</label>
+                <input type="date"
+                       @bind="checkOut"
+                       @bind:format="yyyy-MM-dd"
+                       min="@checkIn.AddDays(1).ToString("yyyy-MM-dd")" />
+            </div>
+            <div class="form-group">
+                <label>ROOM TYPE</label>
+                <input type="text" value="@(room?.Room_Type)" disabled />
+            </div>
+            <div class="form-group">
+                <label>BASE PRICE</label>
+                <input type="text" value="Rs. @(room?.Price.ToString("N0")) / night" disabled />
+            </div>
+            <div class="form-group full-width">
+                <label>SPECIAL REQUESTS</label>
+                <textarea @bind="specialRequests" placeholder="Any special requests or notes..."></textarea>
+            </div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="section-header">
+            <div class="section-icon">💰</div>
+            <h3>PRICE SUMMARY</h3>
+        </div>
+
+        <div class="price-summary-box">
+            <div class="price-row">
+                <span class="price-label">Stay Duration</span>
+                <span class="price-val">@totalNights night(s)</span>
+            </div>
+            <div class="price-row">
+                <span class="price-label">Room Rate</span>
+                <span class="price-val">Rs. @((room?.Price ?? 0).ToString("N0"))</span>
+            </div>
+            <div class="price-row">
+                <span class="price-label">Subtotal</span>
+                <span class="price-val">Rs. @(totalPrice.ToString("N0"))</span>
+            </div>
+            <div class="price-row">
+                <span class="price-label">Taxes & Fees (10%)</span>
+                <span class="price-val">Rs. @((totalPrice * 0.1).ToString("N0"))</span>
+            </div>
+            <div class="price-row total-row">
+                <span class="total-label">Total Amount</span>
+                <span class="total-val">Rs. @((totalPrice * 1.1).ToString("N0"))</span>
+            </div>
         </div>
 
         @if (!string.IsNullOrEmpty(errorMessage))
@@ -59,7 +135,8 @@
         <div class="form-actions">
             <button class="btn-cancel" @onclick="GoBack" disabled="@isSaving">Cancel</button>
             <button class="btn-confirm" @onclick="ConfirmBooking" disabled="@isSaving">
-                @(isSaving ? "Saving..." : "Confirm Booking")
+                @if (isSaving) { <div class="spinner-small"></div> <span>Processing...</span> }
+                else { <span>Confirm Booking →</span> }
             </button>
         </div>
     </div>
@@ -68,16 +145,57 @@
 @code {
     [Parameter] public int RoomId { get; set; }
 
+    private Room? room;
     private string guestName = "";
     private string guestEmail = "";
     private string guestPhone = "";
+    private int guests = 1;
     private DateTime checkIn = DateTime.Now;
     private DateTime checkOut = DateTime.Now.AddDays(1);
+    private string specialRequests = "";
     private string errorMessage = "";
     private bool isSaving = false;
 
-    private int totalNights => Math.Max((checkOut - checkIn).Days, 0);
-    private int totalPrice => totalNights * 5000;
+    // Search logic
+    private GuestProfile? foundGuest = null;
+    private bool isSearching = false;
+
+    private int totalNights => Math.Max((checkOut.Date - checkIn.Date).Days, 0);
+    private double totalPrice => totalNights * (room?.Price ?? 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        room = await RoomService.GetRoomByIdAsync(RoomId);
+        if (room == null)
+        {
+            errorMessage = "Room not found.";
+        }
+    }
+
+    private async Task AutoLookupGuest()
+    {
+        // Only lookup if email looks valid and has length
+        if (string.IsNullOrWhiteSpace(guestEmail) || !guestEmail.Contains("@"))
+        {
+            foundGuest = null;
+            return;
+        }
+
+        isSearching = true;
+        var existing = await GuestService.GetGuestByEmailAsync(guestEmail);
+        isSearching = false;
+
+        if (existing != null)
+        {
+            foundGuest = existing;
+            guestName = existing.Name;
+            guestPhone = existing.PhoneNo;
+        }
+        else
+        {
+            foundGuest = null;
+        }
+    }
 
     private async Task GoBack()
     {
@@ -88,10 +206,10 @@
     {
         if (string.IsNullOrEmpty(guestName) || string.IsNullOrEmpty(guestEmail))
         {
-            errorMessage = "Please fill in all required fields.";
+            errorMessage = "Please fill in Guest Name and Email.";
             return;
         }
-        if (checkOut <= checkIn)
+        if (checkOut.Date <= checkIn.Date)
         {
             errorMessage = "Check-out date must be after check-in date.";
             return;
@@ -100,17 +218,43 @@
         isSaving = true;
         errorMessage = "";
 
-        // Check availability BEFORE creating reservation
-        var isAvailable = await ReservationService.IsRoomAvailableAsync(RoomId, checkIn, checkOut);
-        if (!isAvailable)
+        try 
         {
-            errorMessage = "This room is already booked for the selected dates.";
-            isSaving = false;
-            return;
-        }
+            // 1. Ensure Guest Profile exists
+            if (foundGuest == null)
+            {
+                var existing = await GuestService.GetGuestByEmailAsync(guestEmail);
+                if (existing == null)
+                {
+                    // Create new profile
+                    var newGuest = new GuestProfile
+                    {
+                        Name = guestName,
+                        Email = guestEmail,
+                        PhoneNo = guestPhone,
+                        Tier = "Bronze",
+                        Status = "Active"
+                    };
+                    await GuestService.CreateGuestAsync(newGuest);
+                    foundGuest = await GuestService.GetGuestByEmailAsync(guestEmail);
+                }
+                else
+                {
+                    foundGuest = existing;
+                }
+            }
 
-        // Let SQLite auto-assign Reservation_ID
-        var reservation = new Reservation
+            // 2. Check room availability
+            var isAvailable = await ReservationService.IsRoomAvailableAsync(RoomId, checkIn, checkOut);
+            if (!isAvailable)
+            {
+                errorMessage = "This room is no longer available for the selected dates.";
+                isSaving = false;
+                return;
+            }
+
+            // 3. Create Reservation
+            var reservation = new Reservation
             {
                 BookingReference = "LS-" + DateTime.Now.ToString("yyyyMMddHHmmss"),
                 GuestName = guestName,
@@ -119,21 +263,25 @@
                 Room_ID = RoomId,
                 CheckIn = checkIn,
                 CheckOut = checkOut,
-                NumberOfGuests = 1,
-                TotalPrice = totalPrice,
+                NumberOfGuests = guests,
+                TotalPrice = totalPrice * 1.1,
                 Status = "Confirmed",
                 Created_at = DateTime.UtcNow
             };
 
-        await ReservationService.AddReservationAsync(reservation);
-        isSaving = false;
-
-        Navigation.NavigateTo("/booking-confirmation/" + reservation.BookingReference +
-            "?guest=" + Uri.EscapeDataString(guestName) +
-            "&room=" + RoomId +
-            "&checkin=" + checkIn.ToString("yyyy-MM-dd") +
-            "&checkout=" + checkOut.ToString("yyyy-MM-dd") +
-            "&total=" + totalPrice);
+            await ReservationService.AddReservationAsync(reservation);
+            
+            // Redirect to confirmation
+            Navigation.NavigateTo("/booking-confirmation/" + reservation.BookingReference);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Error saving booking: " + ex.Message;
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private void OnCheckInChanged(ChangeEventArgs e)
@@ -141,7 +289,6 @@
         if (DateTime.TryParse(e.Value?.ToString(), out var newCheckIn))
         {
             checkIn = newCheckIn;
-            // Auto push checkout if it's before or same as checkin
             if (checkOut <= checkIn)
             {
                 checkOut = checkIn.AddDays(1);
@@ -151,136 +298,59 @@
 }
 
 <style>
-    .booking-container {
-        padding: 2rem;
-        max-width: 600px;
-        margin: 0 auto;
-    }
+    .booking-container { padding: 2rem; max-width: 850px; margin: 0 auto; color: #e2e8f0; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+    .header-room-info { font-size: 0.9rem; color: var(--accent-purple); cursor: pointer; background: rgba(187, 134, 252, 0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(187, 134, 252, 0.2); }
 
-    .page-header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
+    /* Step Indicator */
+    .step-indicator { display: flex; align-items: center; justify-content: center; margin-bottom: 2.5rem; gap: 15px; }
+    .step { display: flex; align-items: center; gap: 10px; color: #64748b; font-size: 0.9rem; font-weight: 600; }
+    .step-circle { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #334155; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; }
+    .step.completed { color: #10b981; }
+    .step.completed .step-circle { border-color: #10b981; color: #10b981; }
+    .step.active { color: var(--accent-purple); }
+    .step.active .step-circle { border-color: var(--accent-purple); background: rgba(187, 134, 252, 0.1); }
+    .step-line { height: 2px; flex: 1; background: #334155; max-width: 80px; }
+    .step.completed + .step-line { background: #10b981; }
 
-        .page-header h2 {
-            margin-bottom: 0;
-        }
+    /* Form Card */
+    .booking-form-card { background: #13181f; padding: 2.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 15px 40px rgba(0,0,0,0.6); }
+    
+    .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+    .section-icon { width: 36px; height: 36px; background: rgba(187, 134, 252, 0.1); color: var(--accent-purple); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+    .section-header h3 { color: #fff; margin: 0; font-size: 0.85rem; letter-spacing: 2px; font-weight: 800; }
+    .section-divider { height: 1px; background: linear-gradient(to right, rgba(255,255,255,0.05), transparent); margin: 2.5rem 0; }
 
-    .btn-back {
-        padding: 8px 16px;
-        background: #f5f5f5;
-        color: #555;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.95rem;
-    }
+    .input-with-lookup { position: relative; }
+    .searching-dots { position: absolute; right: 12px; top: 12px; color: var(--accent-purple); font-size: 0.8rem; font-weight: 800; animation: pulse 1s infinite; }
 
-        .btn-back:hover {
-            background: #e0e0e0;
-        }
+    .guest-found-badge { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 12px; border-radius: 12px; margin-top: 1rem; display: flex; align-items: center; gap: 10px; font-size: 0.95rem; }
 
-    h2 {
-        color: #2e7d32;
-    }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    label { display: block; font-size: 0.75rem; font-weight: 800; color: #475569; margin-bottom: 8px; letter-spacing: 1px; }
+    input, select, textarea { width: 100%; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); color: #fff; border-radius: 12px; font-size: 1rem; transition: all 0.3s; }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent-purple); background: rgba(187, 134, 252, 0.05); }
+    input:disabled { opacity: 0.5; background: rgba(0,0,0,0.2); }
 
-    h3 {
-        color: #444;
-        margin: 1.5rem 0 1rem;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 0.5rem;
-    }
+    .price-summary-box { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem; }
+    .price-row { display: flex; justify-content: space-between; margin-bottom: 0.8rem; font-size: 0.95rem; color: #94a3b8; }
+    .price-val { color: #cbd5e1; font-weight: 600; }
+    .total-row { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px dotted rgba(255,255,255,0.1); align-items: center; }
+    .total-label { color: #fff; font-weight: 800; font-size: 1.1rem; }
+    .total-val { color: var(--accent-purple); font-weight: 900; font-size: 1.5rem; text-shadow: 0 0 10px rgba(187, 134, 252, 0.3); }
 
-    .booking-form {
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
+    .error-box { background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 15px; border-radius: 12px; margin-top: 2rem; border: 1px solid rgba(239, 68, 68, 0.2); font-weight: 600; }
+    
+    .form-actions { display: flex; gap: 1.5rem; margin-top: 3rem; }
+    .btn-cancel { flex: 1; padding: 1.1rem; background: transparent; color: #64748b; border: 1px solid #334155; border-radius: 12px; font-weight: 700; cursor: pointer; transition: all 0.3s; }
+    .btn-cancel:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    
+    .btn-confirm { flex: 2; padding: 1.1rem; background: var(--accent-purple); color: #000; border: none; border-radius: 12px; font-weight: 900; font-size: 1.1rem; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-confirm:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(187, 134, 252, 0.4); }
+    .btn-confirm:disabled { opacity: 0.6; cursor: wait; }
 
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    label {
-        display: block;
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #555;
-        margin-bottom: 4px;
-    }
-
-    input, select {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 1rem;
-        box-sizing: border-box;
-    }
-
-        input:focus {
-            outline: none;
-            border-color: #2e7d32;
-        }
-
-    .room-summary {
-        background: #f1f8e9;
-        padding: 1rem;
-        border-radius: 8px;
-        margin: 1rem 0;
-    }
-
-        .room-summary p {
-            margin: 0.3rem 0;
-            color: #555;
-        }
-
-    .total-price {
-        font-weight: 700;
-        font-size: 1.1rem;
-        color: #2e7d32;
-    }
-
-    .error-box {
-        background: #ffebee;
-        color: #c62828;
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 1.5rem;
-    }
-
-    .btn-cancel {
-        flex: 1;
-        padding: 12px;
-        background: #f5f5f5;
-        color: #555;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1rem;
-    }
-
-    .btn-confirm {
-        flex: 2;
-        padding: 12px;
-        background: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 1rem;
-    }
-
-        .btn-confirm:hover {
-            background: #1b5e20;
-        }
+    .spinner-small { width: 18px; height: 18px; border: 3px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    @@keyframes pulse { 0% { opacity: 0.4; } 50% { opacity: 1; } 100% { opacity: 0.4; } }
 </style>

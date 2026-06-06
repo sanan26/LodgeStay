@@ -20,7 +20,7 @@ namespace LodgeStay.Services
             if (guest == null) return false;
 
             guest.LoyaltyPoints += nights * 10;
-            guest.LoyaltyTier = CalculateTier(guest.LoyaltyPoints);
+            guest.Tier = CalculateTier(guest.LoyaltyPoints);
             await _db.UpdateGuestAsync(guest);
 
             await _db.InsertLoyaltyHistoryAsync(new LoyaltyHistory
@@ -42,7 +42,7 @@ namespace LodgeStay.Services
             if (guest == null || guest.LoyaltyPoints < points) return (false, 0);
 
             guest.LoyaltyPoints -= points;
-            guest.LoyaltyTier = CalculateTier(guest.LoyaltyPoints);
+            guest.Tier = CalculateTier(guest.LoyaltyPoints);
             await _db.UpdateGuestAsync(guest);
 
             await _db.InsertLoyaltyHistoryAsync(new LoyaltyHistory

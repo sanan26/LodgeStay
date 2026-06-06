@@ -1,97 +1,62 @@
 @using LodgeStay.Services
 @inject NavigationManager Navigation
 @inject SessionService SessionService
+@inject IJSRuntime JSRuntime
 
-<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">🏨 LodgeStay</a>
-    </div>
-</div>
-
-<div class="nav-scrollable">
-    <nav class="nav flex-column">
-
-        @if (SessionService.IsloggedIn)
-        {
-            <!-- Operations — all logged-in users -->
-            <div class="nav-section-label">Operations</div>
-
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="room-finder">🔍 Room Finder</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="reservations">📋 Reservations</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="guest-profiles">👥 Guest Profiles</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="group-booking">👨‍👩‍👧‍👦 Group Booking</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="ecostay">🌿 EcoStay</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="concierge">💬 Concierge</NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="notifications/settings">🔔 Notifications</NavLink>
-            </div>
-
-            <!-- Management — Manager + Owner only -->
-            @if (SessionService.IsManager || SessionService.IsOwner)
-            {
-                <div class="nav-section-label">Management</div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="loyalty-points">⭐ Loyalty Points</NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="dashboard">📊 Dashboard</NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="reports">📈 Reports</NavLink>
-                </div>
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="localdeals">🏷️ Local Deals</NavLink>
-                </div>
-            }
-
-            <!-- Owner only -->
-            @if (SessionService.IsOwner)
-            {
-                <div class="nav-section-label">Owner</div>
-
-                <div class="nav-item px-3">
-                    <NavLink class="nav-link" href="owner-dashboard">👑 Owner Dashboard</NavLink>
-                </div>
-            }
-
-            <div class="nav-item px-3 mt-2">
-                <button class="nav-link logout-btn" @onclick="Logout">🚪 Logout</button>
-            </div>
-        }
-        else
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="login">🔐 Login</NavLink>
-            </div>
-        }
-
-    </nav>
-</div>
-
-@implements IDisposable
-
-@code {
-    protected override void OnInitialized()
+<div class="nav-links-container">
+    <NavLink class="pill-link" href="@GetDashboardPath()" Match="NavLinkMatch.All">
+        <span class="text">DASH</span>
+    </NavLink>
+    <NavLink class="pill-link" href="room-finder">
+        <span class="text">ROOMS</span>
+    </NavLink>
+    <NavLink class="pill-link" href="reservations">
+        <span class="text">BOOKS</span>
+    </NavLink>
+    <NavLink class="pill-link" href="guest-profiles">
+        <span class="text">GUESTS</span>
+    </NavLink>
+    <NavLink class="pill-link" href="group-booking">
+        <span class="text">GROUPS</span>
+    </NavLink>
+    <NavLink class="pill-link" href="ecostay">
+        <span class="text">ECO</span>
+    </NavLink>
+    <NavLink class="pill-link" href="concierge">
+        <span class="text">CHAT</span>
+    </NavLink>
+    
+    @if (SessionService.IsManager || SessionService.IsOwner)
     {
-        SessionService.OnChange += StateHasChanged;
+        <div class="nav-divider"></div>
+        <NavLink class="pill-link" href="loyalty-points">
+            <span class="text">STAR</span>
+        </NavLink>
+        <NavLink class="pill-link" href="reports">
+            <span class="text">REPS</span>
+        </NavLink>
+        <NavLink class="pill-link" href="localdeals">
+            <span class="text">DEALS</span>
+        </NavLink>
     }
 
-    public void Dispose()
+    <div class="nav-divider"></div>
+    <button class="pill-link logout-trigger" @onclick="Logout">
+        <span class="text">EXIT</span>
+    </button>
+</div>
+
+@code {
+    private string GetDashboardPath()
     {
-        SessionService.OnChange -= StateHasChanged;
+        var role = SessionService.CurrentUser?.Role;
+        return role switch
+        {
+            "Owner" => "owner-dashboard",
+            "Manager" => "manager-dashboard",
+            "Staff" => "staff-dashboard",
+            _ => "dashboard"
+        };
     }
 
     private void Logout()
@@ -102,33 +67,49 @@
 }
 
 <style>
-    .nav-section-label {
-        font-size: 0.7rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: rgba(255,255,255,0.4);
-        padding: 1rem 1.5rem 0.25rem;
-        margin-top: 0.25rem;
-    }
-
-    .logout-btn {
-        background: none;
-        border: none;
-        color: #d7d7d7;
-        cursor: pointer;
-        width: 100%;
-        text-align: left;
-        padding: 0 1rem;
-        font-size: 0.9rem;
-        height: 3rem;
+    .nav-links-container { display: flex; align-items: center; gap: 0.4rem; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+    
+    .pill-link {
         display: flex;
         align-items: center;
-        border-radius: 4px;
+        gap: 8px;
+        padding: 8px 14px;
+        border-radius: 12px;
+        text-decoration: none;
+        color: #94a3b8;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        white-space: nowrap;
     }
 
-    .logout-btn:hover {
-        background-color: rgba(255,255,255,0.1);
-        color: white;
+    .pill-link .icon { font-size: 1rem; }
+    .pill-link .text { opacity: 0.7; }
+
+    .pill-link:hover {
+        background: rgba(255,255,255,0.05);
+        color: #fff;
+    }
+
+    .pill-link.active {
+        background: rgba(187, 134, 252, 0.1);
+        color: var(--accent-purple);
+        border: 1px solid rgba(187, 134, 252, 0.2);
+        box-shadow: 0 4px 12px rgba(187, 134, 252, 0.1);
+    }
+    
+    .pill-link.active .text { opacity: 1; }
+
+    .nav-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.1); margin: 0 4px; }
+    
+    .logout-trigger { color: #f87171; }
+    .logout-trigger:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+    @@media (max-width: 1200px) {
+        .pill-link .text { display: none; }
+        .pill-link { padding: 8px; }
     }
 </style>

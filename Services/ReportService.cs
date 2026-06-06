@@ -1,4 +1,4 @@
-﻿using LodgeStay.Data;
+using LodgeStay.Data;
 using LodgeStay.Models;
 
 namespace LodgeStay.Services
@@ -153,9 +153,9 @@ namespace LodgeStay.Services
         private async Task<string> GenerateLoyaltyCsvAsync(DateTime start, DateTime end)
         {
             var report = await GetLoyaltyReportAsync(start, end);
-            var lines = new List<string> { "GuestName,Email,LoyaltyPoints,LoyaltyTier" };
+            var lines = new List<string> { "GuestName,Email,LoyaltyPoints,Tier" };
             lines.AddRange(report.TopGuests.Select(g =>
-                $"{g.Name},{g.Email},{g.LoyaltyPoints},{g.LoyaltyTier}"));
+                $"{g.Name},{g.Email},{g.LoyaltyPoints},{g.Tier}"));
             return string.Join("\n", lines);
         }
 

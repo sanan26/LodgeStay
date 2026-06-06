@@ -8,154 +8,131 @@
 @inject ReservationService ReservationService
 
 <div class="lp-root">
-    <div class="lp-header">
-        <div class="lp-header-left">
-            <button class="btn-back" @onclick="GoBack">← Back</button>
-            <DashboardButton />
-        </div>
-        <div class="lp-title">
-            <span class="star-icon">✦</span>
-            <h1>Loyalty Points</h1>
-            <span class="star-icon">✦</span>
-        </div>
-        <div class="lp-header-right"></div>
-    </div>
-
-    <div class="guest-picker">
-        <label class="picker-label">Select Guest</label>
-        <div class="select-wrapper">
-            <select value="@selectedGuestId" @onchange="OnGuestSelectedChange">
-                <option value="0">— Choose a guest —</option>
-                @foreach (var g in allGuests)
-                {
-                    <option value="@g.Id">@g.Name · @g.Email</option>
-                }
-            </select>
-            <span class="select-arrow">▾</span>
-        </div>
+    <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <select class="guest-select" value="@selectedGuestId" @onchange="OnGuestSelectedChange">
+            <option value="0">Search and select a guest...</option>
+            @foreach (var g in allGuests)
+            {
+                <option value="@g.Id">@g.Name · @g.Email</option>
+            }
+        </select>
     </div>
 
     @if (selectedGuest == null)
     {
         <div class="empty-state">
             <div class="empty-icon">⭐</div>
-            <p>Select a guest to view their loyalty status</p>
+            <p>Select a guest above to view their loyalty status, award points, or redeem rewards.</p>
         </div>
     }
     else
     {
-        <div class="lp-body">
-            <div class="lp-left">
-                <div class="tier-card tier-@selectedGuest.LoyaltyTier.ToLower()">
-                    <div class="tier-card-bg"></div>
-                    <div class="tier-card-content">
-                        <div class="tier-top">
-                            <span class="tier-emblem">@GetTierEmoji(selectedGuest.LoyaltyTier)</span>
-                            <div class="tier-info">
-                                <span class="tier-name">@selectedGuest.LoyaltyTier</span>
-                                <span class="tier-sub">Member Tier</span>
+        <div class="hub-layout">
+            <!-- Left Column: Status & Info -->
+            <div class="hub-left">
+                <!-- Dynamic Tier Card -->
+                <div class="glass-card tier-card @GetTierClass(selectedGuest.Tier)">
+                    <div class="tier-glow"></div>
+                    <div class="tier-content">
+                        <div class="tier-header">
+                            <span class="tier-emoji">@GetTierEmoji(selectedGuest.Tier)</span>
+                            <div class="tier-titles">
+                                <span class="tier-name">@selectedGuest.Tier Member</span>
+                                <span class="guest-name">@selectedGuest.Name</span>
                             </div>
                         </div>
-                        <div class="tier-points-display">
-                            <span class="tier-points-num">@selectedGuest.LoyaltyPoints.ToString("N0")</span>
-                            <span class="tier-points-label">POINTS</span>
+                        <div class="points-display">
+                            <span class="points-val">@selectedGuest.LoyaltyPoints.ToString("N0")</span>
+                            <span class="points-lbl">Available Points</span>
                         </div>
-                        <div class="tier-progress-wrap">
-                            <div class="tier-progress-bar">
-                                <div class="tier-progress-fill" style="width: @GetProgressPercent(selectedGuest.LoyaltyPoints)%"></div>
+                        <div class="progress-section">
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: @GetProgressPercent(selectedGuest.LoyaltyPoints)%"></div>
                             </div>
-                            <span class="tier-next">@GetNextTierText(selectedGuest.LoyaltyPoints)</span>
+                            <span class="progress-text">@GetNextTierText(selectedGuest.LoyaltyPoints)</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="guest-info-card">
-                    <div class="guest-avatar">@selectedGuest.Name[0]</div>
-                    <div class="guest-details">
-                        <h3>@selectedGuest.Name</h3>
-                        <p>@selectedGuest.Email</p>
-                        <p>@selectedGuest.PhoneNo</p>
-                    </div>
-                </div>
-
-                <div class="action-card award-card">
-                    <div class="action-card-header">
-                        <span class="action-icon">➕</span>
-                        <h4>Award Points</h4>
-                    </div>
-                    <p class="action-hint">10 points per night stayed</p>
-                    <div class="nights-input-row">
-                        <button class="stepper-btn" @onclick="() => { if (nightsToAward > 1) nightsToAward--; }">−</button>
-                        <div class="nights-display">
-                            <span class="nights-num">@nightsToAward</span>
-                            <span class="nights-label">nights</span>
-                        </div>
-                        <button class="stepper-btn" @onclick="() => { if (nightsToAward < 30) nightsToAward++; }">+</button>
-                    </div>
-                    <div class="award-preview">+<strong>@(nightsToAward * 10)</strong> points</div>
-                    <button class="btn-award" @onclick="AwardPoints">Award Points</button>
+                <!-- Guest Info Mini-Card -->
+                <div class="glass-card info-card">
+                    <div class="info-row"><span class="icon">✉️</span> @selectedGuest.Email</div>
+                    <div class="info-row"><span class="icon">📱</span> @selectedGuest.PhoneNo</div>
                 </div>
             </div>
 
-            <div class="lp-right">
-                <div class="action-card redeem-card">
-                    <div class="action-card-header">
-                        <span class="action-icon">🎁</span>
-                        <h4>Redeem Points</h4>
-                    </div>
-                    <p class="action-hint">100 points = Rs. 100 off booking</p>
-                    <div class="balance-chip">
-                        <span>Balance</span>
-                        <strong>@selectedGuest.LoyaltyPoints pts</strong>
-                    </div>
-                    <div class="slider-section">
-                        <input class="lp-slider" type="range"
-                               min="0"
-                               max="@((selectedGuest.LoyaltyPoints / 100) * 100)"
-                               step="100"
-                               @bind="redeemPoints"
-                               @bind:event="oninput" />
-                        <div class="slider-ends">
-                            <span>0</span>
-                            <span>@((selectedGuest.LoyaltyPoints / 100) * 100) max</span>
+            <!-- Right Column: Actions & History -->
+            <div class="hub-right">
+                <div class="action-grid">
+                    <!-- Award Points Panel -->
+                    <div class="glass-card action-panel">
+                        <h3 class="panel-title">Award Points</h3>
+                        <p class="panel-desc">10 points awarded per night stayed.</p>
+                        
+                        <div class="stepper-wrap">
+                            <button class="btn-stepper" @onclick="() => { if (nightsToAward > 1) nightsToAward--; }">−</button>
+                            <div class="stepper-val">
+                                <strong>@nightsToAward</strong>
+                                <span>nights</span>
+                            </div>
+                            <button class="btn-stepper" @onclick="() => { if (nightsToAward < 30) nightsToAward++; }">+</button>
                         </div>
-                    </div>
-                    <div class="redeem-calc">
-                        <div class="calc-row">
-                            <span>Redeeming</span>
-                            <strong>@redeemPoints pts</strong>
+                        
+                        <div class="preview-box award-preview">
+                            <span>Will award:</span>
+                            <strong>+@(nightsToAward * 10) pts</strong>
                         </div>
-                        <div class="calc-divider"></div>
-                        <div class="calc-row discount-row">
-                            <span>Discount</span>
+                        
+                        <button class="btn-action btn-award" @onclick="AwardPoints">Award Points</button>
+                    </div>
+
+                    <!-- Redeem Points Panel -->
+                    <div class="glass-card action-panel">
+                        <h3 class="panel-title">Redeem Rewards</h3>
+                        <p class="panel-desc">100 points = Rs. 100 off booking.</p>
+
+                        <div class="slider-wrap">
+                            <input type="range" class="custom-slider"
+                                   min="0" max="@((selectedGuest.LoyaltyPoints / 100) * 100)" step="100"
+                                   @bind="redeemPoints" @bind:event="oninput" />
+                            <div class="slider-labels">
+                                <span>0</span>
+                                <span>@((selectedGuest.LoyaltyPoints / 100) * 100) max</span>
+                            </div>
+                        </div>
+
+                        <div class="preview-box redeem-preview">
+                            <span>Discount:</span>
                             <strong>Rs. @redeemPoints</strong>
                         </div>
+
+                        <button class="btn-action btn-redeem" @onclick="RedeemPoints" disabled="@(redeemPoints < 100)">
+                            @(redeemPoints < 100 ? "Select 100+ points" : $"Apply Rs. {redeemPoints} Discount")
+                        </button>
                     </div>
-                    <button class="btn-redeem" @onclick="RedeemPoints" disabled="@(redeemPoints < 100)">
-                        @(redeemPoints < 100 ? "Select 100+ points" : $"Apply Rs. {redeemPoints} Discount")
-                    </button>
                 </div>
 
-                <div class="history-card">
-                    <div class="action-card-header">
-                        <span class="action-icon">📜</span>
-                        <h4>Points History</h4>
-                    </div>
+                <!-- History Timeline -->
+                <div class="glass-card history-panel">
+                    <h3 class="panel-title">Points History</h3>
                     @if (pointsHistory.Count == 0)
                     {
-                        <p class="no-history">No history yet</p>
+                        <p class="empty-text">No points history available for this guest.</p>
                     }
                     else
                     {
-                        <div class="history-list">
+                        <div class="timeline">
                             @foreach (var entry in pointsHistory)
                             {
-                                <div class="history-row">
-                                    <div class="history-dot @(entry.IsEarn ? "dot-earn" : "dot-redeem")"></div>
-                                    <span class="history-desc">@entry.Description</span>
-                                    <span class="history-pts @(entry.IsEarn ? "pts-earn" : "pts-redeem")">
-                                        @(entry.IsEarn ? "+" : "-")@entry.Points
-                                    </span>
+                                <div class="timeline-item">
+                                    <div class="timeline-dot @(entry.IsEarn ? "dot-earn" : "dot-redeem")"></div>
+                                    <div class="timeline-content">
+                                        <span class="history-desc">@entry.Description</span>
+                                        <span class="history-pts @(entry.IsEarn ? "pts-earn" : "pts-redeem")">
+                                            @(entry.IsEarn ? "+" : "-")@entry.Points
+                                        </span>
+                                    </div>
                                 </div>
                             }
                         </div>
@@ -163,13 +140,13 @@
                 </div>
             </div>
         </div>
+    }
 
-        @if (!string.IsNullOrEmpty(feedbackMessage))
-        {
-            <div class="feedback-toast @(isError ? "toast-error" : "toast-success")">
-                @feedbackMessage
-            </div>
-        }
+    @if (!string.IsNullOrEmpty(feedbackMessage))
+    {
+        <div class="toast @(isError ? "toast-error" : "toast-success")">
+            @feedbackMessage
+        </div>
     }
 </div>
 
@@ -290,558 +267,118 @@
 }
 
 <style>
-    .lp-root {
-        min-height: 100vh;
-        background: #f4f6f0;
-        padding: 2rem;
-        font-family: 'Segoe UI', sans-serif;
-        color: #1a2416;
-    }
-
-    .lp-header {
-        display: grid;
-        grid-template-columns: 1fr auto 1fr;
-        align-items: center;
-        margin-bottom: 2.5rem;
-    }
-
-    .lp-header-left {
-        display: flex;
-        gap: 0.75rem;
-    }
-
-    .lp-title {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        justify-content: center;
-    }
-
-        .lp-title h1 {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin: 0;
-            color: #1a2416;
-        }
-
-    .star-icon {
-        color: #c8a84b;
-        font-size: 1.2rem;
-    }
-
-    .btn-back {
-        padding: 8px 18px;
-        background: white;
-        border: 1.5px solid #d0d8c8;
-        border-radius: 10px;
-        cursor: pointer;
-        font-size: 0.9rem;
-        color: #4a5a44;
-        transition: all 0.2s;
-    }
-
-        .btn-back:hover {
-            background: #edf2e8;
-            border-color: #2e7d32;
-        }
-
-    .guest-picker {
-        margin-bottom: 2rem;
-    }
-
-    .picker-label {
-        display: block;
-        font-size: 0.78rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        color: #7a8a74;
-        margin-bottom: 8px;
-    }
-
-    .select-wrapper {
-        position: relative;
-        max-width: 480px;
-    }
-
-        .select-wrapper select {
-            width: 100%;
-            padding: 14px 44px 14px 16px;
-            background: white;
-            border: 1.5px solid #d0d8c8;
-            border-radius: 12px;
-            font-size: 1rem;
-            color: #1a2416;
-            appearance: none;
-            cursor: pointer;
-            transition: border-color 0.2s;
-        }
-
-            .select-wrapper select:focus {
-                outline: none;
-                border-color: #2e7d32;
-            }
-
-    .select-arrow {
-        position: absolute;
-        right: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: #7a8a74;
-        pointer-events: none;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 5rem 2rem;
-        color: #9aaa94;
-    }
-
-    .empty-icon {
-        font-size: 4rem;
-        margin-bottom: 1rem;
-        opacity: 0.4;
-    }
-
-    .lp-body {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-
-    .lp-left, .lp-right {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .tier-card {
-        position: relative;
-        border-radius: 20px;
-        padding: 1.75rem;
-        overflow: hidden;
-        color: white;
-    }
-
-    .tier-gold {
-        background: linear-gradient(135deg, #b8860b, #daa520, #ffd700);
-    }
-
-    .tier-silver {
-        background: linear-gradient(135deg, #5a6a6a, #8a9a9a, #b0c0c0);
-    }
-
-    .tier-bronze {
-        background: linear-gradient(135deg, #7a4a1a, #a0642a, #cd7f32);
-    }
-
-    .tier-card-bg {
-        position: absolute;
-        inset: 0;
-        background: radial-gradient(circle at 80% 20%, rgba(255,255,255,0.15) 0%, transparent 60%);
-    }
-
-    .tier-card-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .tier-top {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .tier-emblem {
-        font-size: 2.5rem;
-    }
-
-    .tier-name {
-        display: block;
-        font-size: 1.3rem;
-        font-weight: 700;
-    }
-
-    .tier-sub {
-        font-size: 0.78rem;
-        opacity: 0.8;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .tier-points-display {
-        margin-bottom: 1.25rem;
-    }
-
-    .tier-points-num {
-        font-size: 3rem;
-        font-weight: 800;
-        line-height: 1;
-    }
-
-    .tier-points-label {
-        display: block;
-        font-size: 0.72rem;
-        opacity: 0.8;
-        letter-spacing: 2px;
-        margin-top: 2px;
-    }
-
-    .tier-progress-bar {
-        background: rgba(255,255,255,0.25);
-        border-radius: 99px;
-        height: 6px;
-        overflow: hidden;
-        margin-bottom: 6px;
-    }
-
-    .tier-progress-fill {
-        height: 100%;
-        background: white;
-        border-radius: 99px;
-        transition: width 0.5s ease;
-    }
-
-    .tier-next {
-        font-size: 0.8rem;
-        opacity: 0.85;
-    }
-
-    .guest-info-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        border: 1.5px solid #e8ede4;
-    }
-
-    .guest-avatar {
-        width: 48px;
-        height: 48px;
-        background: #2e7d32;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-        font-weight: 700;
-        flex-shrink: 0;
-    }
-
-    .guest-details h3 {
-        margin: 0 0 2px;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-
-    .guest-details p {
-        margin: 1px 0;
-        font-size: 0.82rem;
-        color: #7a8a74;
-    }
-
-    .action-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        border: 1.5px solid #e8ede4;
-    }
-
-    .action-card-header {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .action-icon {
-        font-size: 1.2rem;
-    }
-
-    .action-card-header h4 {
-        margin: 0;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-
-    .action-hint {
-        font-size: 0.82rem;
-        color: #9aaa94;
-        margin-bottom: 1.25rem;
-    }
-
-    .nights-input-row {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 1.5rem;
-        margin: 1rem 0;
-    }
-
-    .stepper-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        border: 1.5px solid #d0d8c8;
-        background: white;
-        font-size: 1.3rem;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: #2e7d32;
-        transition: all 0.2s;
-    }
-
-        .stepper-btn:hover {
-            background: #edf2e8;
-            border-color: #2e7d32;
-        }
-
-    .nights-display {
-        text-align: center;
-    }
-
-    .nights-num {
-        display: block;
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #1a2416;
-        line-height: 1;
-    }
-
-    .nights-label {
-        font-size: 0.72rem;
-        color: #9aaa94;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .award-preview {
-        text-align: center;
-        background: #f0f7f0;
-        border-radius: 10px;
-        padding: 10px;
-        font-size: 1rem;
-        color: #2e7d32;
-        margin-bottom: 1rem;
-    }
-
-    .btn-award {
-        width: 100%;
-        padding: 12px;
-        background: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.2s;
-    }
-
-        .btn-award:hover {
-            background: #1b5e20;
-        }
-
-    .redeem-card {
-        background: #fffdf5;
-        border-color: #e8dfc0;
-    }
-
-    .balance-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #fdf5dc;
-        border: 1px solid #e8dfc0;
-        border-radius: 99px;
-        padding: 6px 14px;
-        font-size: 0.85rem;
-        color: #8a6a14;
-        margin-bottom: 1.25rem;
-    }
-
-    .slider-section {
-        margin-bottom: 1rem;
-    }
-
-    .lp-slider {
-        width: 100%;
-        accent-color: #c8a84b;
-        cursor: pointer;
-    }
-
-    .slider-ends {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.78rem;
-        color: #9aaa94;
-        margin-top: 4px;
-    }
-
-    .redeem-calc {
-        background: white;
-        border-radius: 10px;
-        padding: 12px 14px;
-        margin-bottom: 1rem;
-        border: 1px solid #e8dfc0;
-    }
-
-    .calc-row {
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.9rem;
-        padding: 3px 0;
-    }
-
-    .calc-divider {
-        height: 1px;
-        background: #e8dfc0;
-        margin: 6px 0;
-    }
-
-    .discount-row strong {
-        color: #c8a84b;
-        font-size: 1.05rem;
-    }
-
-    .btn-redeem {
-        width: 100%;
-        padding: 12px;
-        background: #c8a84b;
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-        .btn-redeem:hover:not(:disabled) {
-            background: #a8882b;
-        }
-
-        .btn-redeem:disabled {
-            background: #d8d0c0;
-            color: #a0988a;
-            cursor: not-allowed;
-        }
-
-    .history-card {
-        background: white;
-        border-radius: 16px;
-        padding: 1.5rem;
-        border: 1.5px solid #e8ede4;
-    }
-
-    .history-list {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        max-height: 220px;
-        overflow-y: auto;
-    }
-
-    .history-row {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 10px 8px;
-        border-radius: 8px;
-        transition: background 0.15s;
-    }
-
-        .history-row:hover {
-            background: #f8faf6;
-        }
-
-    .history-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        flex-shrink: 0;
-    }
-
-    .dot-earn {
-        background: #2e7d32;
-    }
-
-    .dot-redeem {
-        background: #c8a84b;
-    }
-
-    .history-desc {
-        flex: 1;
-        font-size: 0.88rem;
-        color: #4a5a44;
-    }
-
-    .history-pts {
-        font-size: 0.88rem;
-        font-weight: 700;
-    }
-
-    .pts-earn {
-        color: #2e7d32;
-    }
-
-    .pts-redeem {
-        color: #c8a84b;
-    }
-
-    .no-history {
-        text-align: center;
-        color: #9aaa94;
-        font-size: 0.9rem;
-        padding: 1rem;
-    }
-
-    .feedback-toast {
-        margin-top: 1.5rem;
-        padding: 14px 20px;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        font-weight: 500;
-    }
-
-    .toast-success {
-        background: #edf7ed;
-        color: #1a5e1a;
-        border: 1px solid #c3e6c3;
-    }
-
-    .toast-error {
-        background: #fdf0f0;
-        color: #8a1a1a;
-        border: 1px solid #f0c3c3;
-    }
-
-    @@media (max-width: 768px) {
-        .lp-body {
-            grid-template-columns: 1fr;
-        }
-
-        .lp-header {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-
-        .lp-header-left {
-            justify-content: center;
-        }
-
-        .lp-header-right {
-            display: none;
-        }
-
-        .lp-title {
-            order: -1;
-        }
+    .lp-root { padding: 2rem; max-width: 1200px; margin: 0 auto; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+
+    /* Hub Header */
+    .hub-header { text-align: center; margin-bottom: 3rem; }
+    .hub-title { font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: center; gap: 0.8rem; }
+    .accent-icon { color: var(--accent-purple); text-shadow: 0 0 15px rgba(187, 134, 252, 0.4); }
+
+    .search-container { position: relative; max-width: 600px; margin: 0 auto; }
+    .search-icon { position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%); font-size: 1.2rem; color: #94a3b8; }
+    .guest-select { width: 100%; padding: 1rem 1rem 1rem 3rem; background: #13181f; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; font-size: 1rem; appearance: none; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+    .guest-select:focus { outline: none; border-color: var(--accent-purple); box-shadow: 0 0 0 3px rgba(187, 134, 252, 0.15); }
+    .guest-select option { background: #13181f; color: #fff; }
+
+    .empty-state { text-align: center; padding: 5rem 2rem; background: #13181f; border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); margin-top: 2rem; }
+    .empty-icon { font-size: 3.5rem; opacity: 0.3; margin-bottom: 1rem; }
+    .empty-state p { color: #94a3b8; font-size: 1.1rem; }
+
+    /* Hub Layout */
+    .hub-layout { display: grid; grid-template-columns: 350px 1fr; gap: 2rem; align-items: start; }
+    .hub-left { display: flex; flex-direction: column; gap: 1.5rem; }
+    .hub-right { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* Glass Cards */
+    .glass-card { background: #13181f; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; box-shadow: 0 8px 32px rgba(0,0,0,0.3); position: relative; overflow: hidden; }
+
+    /* Tier Card */
+    .tier-card { padding: 2rem; text-align: center; }
+    .tier-glow { position: absolute; inset: 0; background: radial-gradient(circle at top, var(--glow-color) 0%, transparent 70%); opacity: 0.15; z-index: 0; }
+    .tier-content { position: relative; z-index: 1; }
+
+    .tier-gold { --glow-color: #fbbf24; border-top: 2px solid #fbbf24; }
+    .tier-silver { --glow-color: #cbd5e1; border-top: 2px solid #cbd5e1; }
+    .tier-bronze { --glow-color: #d97706; border-top: 2px solid #d97706; }
+
+    .tier-header { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; margin-bottom: 2rem; }
+    .tier-emoji { font-size: 3rem; text-shadow: 0 0 20px var(--glow-color); }
+    .tier-titles { display: flex; flex-direction: column; }
+    .tier-name { font-size: 1.2rem; font-weight: 700; color: #fff; letter-spacing: 1px; text-transform: uppercase; }
+    .guest-name { font-size: 0.95rem; color: #94a3b8; }
+
+    .points-display { margin-bottom: 2rem; }
+    .points-val { display: block; font-size: 3.5rem; font-weight: 800; line-height: 1; color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.2); }
+    .points-lbl { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px; }
+
+    .progress-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 10px; overflow: hidden; margin-bottom: 0.5rem; }
+    .progress-fill { height: 100%; background: var(--glow-color); box-shadow: 0 0 10px var(--glow-color); transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); }
+    .progress-text { font-size: 0.8rem; color: #cbd5e1; }
+
+    /* Info Card */
+    .info-card { display: flex; flex-direction: column; gap: 0.8rem; }
+    .info-row { display: flex; align-items: center; gap: 0.8rem; color: #cbd5e1; font-size: 0.95rem; }
+    .info-row .icon { font-size: 1.1rem; opacity: 0.7; }
+
+    /* Action Grid */
+    .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .action-panel { display: flex; flex-direction: column; justify-content: space-between; }
+    .panel-title { font-size: 1.2rem; font-weight: 600; color: #fff; margin: 0 0 0.5rem 0; }
+    .panel-desc { font-size: 0.85rem; color: #94a3b8; margin: 0 0 1.5rem 0; }
+
+    /* Controls */
+    .stepper-wrap { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 12px; padding: 0.5rem; margin-bottom: 1rem; }
+    .btn-stepper { width: 40px; height: 40px; border-radius: 8px; background: rgba(255,255,255,0.05); border: none; color: #fff; font-size: 1.2rem; cursor: pointer; transition: all 0.2s; }
+    .btn-stepper:hover { background: rgba(255,255,255,0.1); }
+    .stepper-val { display: flex; flex-direction: column; align-items: center; }
+    .stepper-val strong { font-size: 1.4rem; color: #fff; line-height: 1; }
+    .stepper-val span { font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; }
+
+    .slider-wrap { margin-bottom: 1rem; }
+    .custom-slider { width: 100%; accent-color: var(--accent-purple); cursor: pointer; }
+    .slider-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem; }
+
+    .preview-box { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-radius: 10px; margin-bottom: 1.5rem; font-size: 0.95rem; }
+    .award-preview { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; }
+    .redeem-preview { background: rgba(187, 134, 252, 0.1); border: 1px solid rgba(187, 134, 252, 0.2); color: var(--accent-purple); }
+
+    .btn-action { width: 100%; padding: 1rem; border-radius: 10px; border: none; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-award { background: #10b981; color: #000; }
+    .btn-award:hover { background: #059669; box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+    .btn-redeem { background: var(--accent-purple); color: #000; }
+    .btn-redeem:hover:not(:disabled) { background: #9d4edd; box-shadow: 0 0 15px rgba(187, 134, 252, 0.3); }
+    .btn-redeem:disabled { background: rgba(255,255,255,0.1); color: #64748b; cursor: not-allowed; }
+
+    /* Timeline */
+    .history-panel { flex: 1; }
+    .timeline { display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem; max-height: 250px; overflow-y: auto; padding-right: 0.5rem; }
+    .timeline::-webkit-scrollbar { width: 6px; }
+    .timeline::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    
+    .timeline-item { display: flex; align-items: center; gap: 1rem; padding: 0.8rem; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.03); transition: transform 0.2s; }
+    .timeline-item:hover { transform: translateX(5px); background: rgba(255,255,255,0.05); }
+    
+    .timeline-dot { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+    .dot-earn { color: #10b981; background: #10b981; }
+    .dot-redeem { color: var(--accent-purple); background: var(--accent-purple); }
+    
+    .timeline-content { flex: 1; display: flex; justify-content: space-between; align-items: center; }
+    .history-desc { font-size: 0.9rem; color: #cbd5e1; }
+    .history-pts { font-weight: 700; font-size: 0.95rem; }
+    .pts-earn { color: #10b981; }
+    .pts-redeem { color: var(--accent-purple); }
+    
+    .empty-text { color: #64748b; font-size: 0.9rem; margin-top: 1rem; }
+
+    /* Toasts */
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); padding: 1rem 2rem; border-radius: 50px; font-weight: 600; font-size: 0.95rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 100; animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .toast-success { background: #10b981; color: #000; border: 1px solid #059669; }
+    .toast-error { background: #ef4444; color: #fff; border: 1px solid #dc2626; }
+
+    @@keyframes slideUp { from { opacity: 0; transform: translate(-50%, 20px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+    @@media (max-width: 900px) {
+        .hub-layout { grid-template-columns: 1fr; }
+        .action-grid { grid-template-columns: 1fr; }
     }
 </style>

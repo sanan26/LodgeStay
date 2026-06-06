@@ -25,7 +25,8 @@ namespace LodgeStay.Models
         public string AmenityNotes { get; set; } = string.Empty;
 
         public int LoyaltyPoints { get; set; } = 0;
-        public string LoyaltyTier { get; set; } = "Bronze";
+        public string Tier { get; set; } = "Bronze";
+        public string Status { get; set; } = "Active";
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public int EcoPoints { get; set; } = 0;

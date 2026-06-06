@@ -4,48 +4,114 @@
 @inject AuthService AuthService
 @inject NavigationManager Navigation
 
-<div class="login-container">
-    <div class="login-card">
-        <div class="logo">🏨</div>
-        <h2>Create Account</h2>
-        <p class="subtitle">Join LodgeStay</p>
+<div class="auth-root">
+    <div class="auth-card glass-panel">
+        <div class="auth-visual alt-theme">
+            <div class="visual-content">
+                <div class="brand-logotype">🏨 LodgeStay<span>.</span></div>
+                <h1>Join the Network</h1>
+                <p>Register your administrative profile to start managing your lodge operations today.</p>
+                
+                <div class="visual-feature-list">
+                    <div class="v-feat">✓ Real-time Analytics</div>
+                    <div class="v-feat">✓ Secure Guest Database</div>
+                    <div class="v-feat">✓ Eco-Framework Ready</div>
+                </div>
+            </div>
+            <div class="visual-blob"></div>
+        </div>
+        
+        <div class="auth-form-side">
+            <div class="form-header">
+                <h2>Create Account</h2>
+                <p>Administrative Registration</p>
+            </div>
 
-        <div class="form-group">
-            <label>Full Name</label>
-            <input type="text" @bind="name" placeholder="Enter your name" />
-        </div>
-        <div class="form-group">
-            <label>Email</label>
-            <input type="email" @bind="email" placeholder="Enter your email" />
-        </div>
-        <div class="form-group">
-            <label>Phone</label>
-            <input type="text" @bind="phone" placeholder="Enter your phone" />
-        </div>
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" @bind="password" placeholder="Min 8 characters" />
-        </div>
-        <div class="form-group">
-            <label>Role</label>
-            <select @bind="role">
-                <option value="Staff">Staff</option>
-                <option value="Manager">Manager</option>
-                <option value="Owner">Owner</option>
-            </select>
-        </div>
+            <div class="form-body">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label>Full Name</label>
+                        <div class="input-wrapper">
+                            <span class="prefix">👤</span>
+                            <input type="text" @bind="name" placeholder="John Doe" />
+                        </div>
+                    </div>
 
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="error-box">⚠️ @errorMessage</div>
-        }
-        @if (!string.IsNullOrEmpty(successMessage))
-        {
-            <div class="success-box">✅ @successMessage</div>
-        }
+                    <div class="input-group">
+                        <label>Phone Number</label>
+                        <div class="input-wrapper">
+                            <span class="prefix">📞</span>
+                            <input type="text" @bind="phone" placeholder="+1..." />
+                        </div>
+                    </div>
+                </div>
 
-        <button class="btn-login" @onclick="HandleRegister">Register</button>
-        <p class="signup-link">Already have an account? <a href="/login">Login</a></p>
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <div class="input-wrapper">
+                        <span class="prefix">📧</span>
+                        <input type="email" @bind="email" placeholder="name@company.com" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Security Password</label>
+                    <div class="input-wrapper">
+                        <span class="prefix">🔒</span>
+                        <input type="password" @bind="password" placeholder="Min 8 characters" />
+                    </div>
+                </div>
+
+                <!-- IMPROVED ROLE SELECTION -->
+                <div class="input-group">
+                    <label>Select Your Role</label>
+                    <div class="role-cards">
+                        <div class="role-card @(role == "Staff" ? "active" : "")" @onclick='() => role = "Staff"'>
+                            <div class="role-icon">👷</div>
+                            <div class="role-info">
+                                <span class="role-name">Staff</span>
+                                <span class="role-desc">Operations</span>
+                            </div>
+                        </div>
+                        <div class="role-card @(role == "Manager" ? "active" : "")" @onclick='() => role = "Manager"'>
+                            <div class="role-icon">👔</div>
+                            <div class="role-info">
+                                <span class="role-name">Manager</span>
+                                <span class="role-desc">Admin</span>
+                            </div>
+                        </div>
+                        <div class="role-card @(role == "Owner" ? "active" : "")" @onclick='() => role = "Owner"'>
+                            <div class="role-icon">👑</div>
+                            <div class="role-info">
+                                <span class="role-name">Owner</span>
+                                <span class="role-desc">Full Control</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="auth-msg error">
+                        <span class="icon">⚠️</span> @errorMessage
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="auth-msg success">
+                        <span class="icon">✅</span> @successMessage
+                    </div>
+                }
+
+                <button class="btn-auth secondary" @onclick="HandleRegister">
+                    <span>Complete Registration</span>
+                </button>
+
+                <div class="auth-footer">
+                    <p>Already have an account? <a href="/login">Sign In</a></p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -65,24 +131,21 @@
 
         if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            errorMessage = "Please fill in all required fields.";
+            errorMessage = "All fields are required.";
             return;
         }
         if (password.Length < 8)
         {
-            errorMessage = "Password must be at least 8 characters.";
+            errorMessage = "Password security requires at least 8 characters.";
             return;
         }
 
-        // FIX: Use AuthService.SignupAsync which BCrypt-hashes the password.
-        // The old code used SHA256 directly, which made login always fail
-        // because AuthService.LoginAsync verifies with BCrypt.
         var user = new User
         {
             Name       = name,
             Email      = email,
             PhoneNo    = phone,
-            PasswordHash = password, // AuthService.SignupAsync will BCrypt this
+            PasswordHash = password,
             Role       = role,
             IsVerified = true
         };
@@ -91,75 +154,98 @@
 
         if (!success)
         {
-            errorMessage = "An account with this email already exists.";
+            errorMessage = "This email is already registered in our system.";
             return;
         }
 
-        successMessage = "Account created! Redirecting to login...";
+        successMessage = "Profile secured! Redirecting to secure login...";
         await Task.Delay(1500);
         Navigation.NavigateTo("/login");
     }
 }
 
 <style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    .auth-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .auth-card { 
+        width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr 1.2fr; overflow: hidden; padding: 0 !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important;
     }
-    .login-card {
-        background: white;
-        padding: 2.5rem;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
+
+    /* Visual Side */
+    .auth-visual { 
+        background: linear-gradient(135deg, var(--accent-purple), #6b21a8); 
+        padding: 3rem; position: relative; overflow: hidden; 
+        display: flex; flex-direction: column; justify-content: center;
     }
-    .logo { font-size: 3rem; margin-bottom: 0.5rem; }
-    h2 { color: #2e7d32; margin-bottom: 0.25rem; }
-    .subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
-    .form-group { text-align: left; margin-bottom: 1rem; }
-    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; font-weight: 600; }
-    input, select {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 1rem;
-        box-sizing: border-box;
+    .auth-visual.alt-theme { background: linear-gradient(135deg, #03dac6, #018786); }
+    
+    .visual-content { position: relative; z-index: 2; }
+    .brand-logotype { font-size: 1.5rem; font-weight: 900; color: #000; margin-bottom: 2rem; }
+    .brand-logotype span { color: #fff; }
+    .auth-visual h1 { color: #000 !important; font-size: 3rem; font-weight: 900; line-height: 1; margin-bottom: 1rem; }
+    .auth-visual p { color: rgba(0,0,0,0.7); font-size: 1.1rem; line-height: 1.5; margin-bottom: 2rem; }
+    
+    .visual-feature-list { display: flex; flex-direction: column; gap: 0.8rem; }
+    .v-feat { color: rgba(0,0,0,0.8); font-weight: 700; font-size: 0.9rem; }
+
+    .visual-blob { 
+        position: absolute; top: -10%; right: -10%; width: 300px; height: 300px; 
+        background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(50px); 
     }
-    input:focus, select:focus { outline: none; border-color: #2e7d32; }
-    .btn-login {
-        width: 100%;
-        padding: 12px;
-        background-color: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        margin-top: 0.5rem;
+
+    /* Form Side */
+    .auth-form-side { padding: 3rem 4rem; background: #13181f; }
+    .form-header { margin-bottom: 2rem; }
+    .form-header h2 { font-size: 2rem; font-weight: 800; color: #fff !important; margin: 0; }
+    .form-header p { color: #64748b; font-size: 0.9rem; margin: 0.5rem 0 0 0; }
+
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+
+    .input-group { margin-bottom: 1.2rem; }
+    .input-group label { display: block; font-size: 0.7rem; font-weight: 800; color: #475569 !important; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .prefix { position: absolute; left: 1rem; color: #475569; font-weight: bold; }
+    
+    .input-wrapper input { 
+        width: 100%; padding: 0.8rem 1rem 0.8rem 2.8rem; background: rgba(255,255,255,0.03); 
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; font-size: 0.95rem; transition: all 0.2s; 
     }
-    .btn-login:hover { background-color: #1b5e20; }
-    .error-box {
-        background: #ffebee;
-        color: #c62828;
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
+    .input-wrapper input:focus { outline: none; border-color: #03dac6; background: rgba(3, 218, 198, 0.05); }
+
+    /* Role Cards */
+    .role-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.8rem; }
+    .role-card { 
+        background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; 
+        padding: 1rem; cursor: pointer; transition: all 0.3s ease; text-align: center;
     }
-    .success-box {
-        background: #e8f5e9;
-        color: #2e7d32;
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
+    .role-card:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
+    .role-card.active { background: rgba(3, 218, 198, 0.1); border-color: #03dac6; box-shadow: 0 0 15px rgba(3, 218, 198, 0.2); }
+    
+    .role-icon { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .role-info { display: flex; flex-direction: column; }
+    .role-name { font-size: 0.85rem; font-weight: 800; color: #fff; }
+    .role-desc { font-size: 0.7rem; color: #64748b; }
+    .role-card.active .role-name { color: #03dac6; }
+
+    .auth-msg { padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; font-size: 0.85rem; font-weight: 600; display: flex; gap: 0.8rem; }
+    .error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .success { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); color: #10b981; }
+
+    .btn-auth { 
+        width: 100%; padding: 1.1rem; background: #03dac6; color: #000; 
+        border: none; border-radius: 12px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.3s; 
     }
-    .signup-link { margin-top: 1.5rem; font-size: 0.9rem; color: #555; }
-    .signup-link a { color: #2e7d32; font-weight: 600; text-decoration: none; }
+    .btn-auth:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(3, 218, 198, 0.4); }
+
+    .auth-footer { margin-top: 1.5rem; text-align: center; }
+    .auth-footer p { color: #64748b; font-size: 0.9rem; }
+    .auth-footer a { color: #03dac6; font-weight: 700; text-decoration: none; }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    @@media (max-width: 900px) {
+        .auth-card { grid-template-columns: 1fr; }
+        .auth-visual { display: none; }
+        .auth-form-side { padding: 2rem; }
+        .form-grid { grid-template-columns: 1fr; }
+    }
 </style>

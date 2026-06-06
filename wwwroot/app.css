@@ -1,5 +1,137 @@
+:root {
+    --bg-black: #020617; 
+    --bg-paint: linear-gradient(135deg, #020617 0%, #1e1b4b 50%, #4c1d95 100%);
+    --card-bg: rgba(15, 23, 42, 0.8); 
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --accent-purple: #a855f7;
+    --accent-glow: rgba(168, 85, 247, 0.4);
+    --glass-border: rgba(255, 255, 255, 0.05);
+}
+
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg-paint) fixed;
+    color: #f1f5f9;
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    touch-action: manipulation;
+}
+
+/* Fluid Typography for smooth scaling across different resolutions */
+h1 { font-size: clamp(2rem, 8vw, 3.5rem); }
+h2 { font-size: clamp(1.5rem, 5vw, 2.2rem); }
+p { font-size: clamp(0.9rem, 2vw, 1.1rem); }
+
+/* Global Typography Overrides for Dark Mode */
+h1, h2, h3, h4, h5, h6, .page-title {
+    color: var(--accent-purple) !important; /* Light purple for headers globally */
+}
+label {
+    color: #f1f5f9 !important; /* Keep labels white */
+}
+
+/* Global Card Styling for Glassmorphism */
+.card, .room-card, .guest-card, .deal-card, .manager-panel, .info-card, .stat-card, .summary-card {
+    background: var(--glass-bg) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    color: #f8fafc !important; /* White text inside cards */
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 12px;
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+}
+
+/* Global Button Styling for Glassmorphism (.btn-glass & overrides) */
+.btn, .btn-primary, .btn-success, .btn-glass, .btn-back, .btn-new, .btn-export, .cat-chip, button:not(.nav-link):not(.navbar-toggler):not(.btn-link) {
+    background: rgba(187, 134, 252, 0.1) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border: 1px solid var(--accent-purple) !important;
+    color: var(--accent-purple) !important;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.btn:hover, .btn-primary:hover, .btn-glass:hover, .btn-back:hover, .cat-chip:hover, button:not(.nav-link):not(.navbar-toggler):not(.btn-link):hover {
+    background: rgba(187, 134, 252, 0.2) !important;
+    box-shadow: 0 0 10px rgba(187, 134, 252, 0.4) !important;
+    color: #fff !important;
+}
+
+/* Ensure headings and text inside cards remain light */
+.card *, .room-card *, .guest-card *, .deal-card *, .manager-panel *, .info-card *, .stat-card *, .summary-card * {
+    color: inherit;
+}
+
+
+/* Glassmorphism utility classes */
+.glass-panel {
+    background: #13181f; /* Consistent dark tone from Reports/Deals */
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+    color: #fff;
+}
+
+/* Global Card Styling Override */
+.card, .room-card, .guest-card, .deal-card, .manager-panel, .info-card, .stat-card, .summary-card {
+    background: #13181f !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.glass-button {
+    background: var(--glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--glass-border);
+    border-radius: 8px;
+    color: var(--accent-purple);
+    transition: all 0.3s ease;
+}
+
+.glass-button:hover {
+    background: rgba(187, 134, 252, 0.1);
+    box-shadow: 0 0 10px rgba(187, 134, 252, 0.4);
+    color: #fff;
+}
+
+.glass-input {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+.glass-input:focus {
+    outline: none;
+    border-color: var(--accent-purple);
+    box-shadow: 0 0 8px rgba(187, 134, 252, 0.5);
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+
+.purple-mesh-bg {
+    background: var(--bg-black);
+    background-image: 
+        radial-gradient(at 0% 0%, rgba(187, 134, 252, 0.15) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(187, 134, 252, 0.1) 0px, transparent 50%);
+}
+
+.global-glow-bg {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: 
+        radial-gradient(circle at 85% 15%, rgba(187, 134, 252, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 15% 85%, rgba(3, 218, 198, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 1) 0%, transparent 100%);
+    z-index: -1;
+    pointer-events: none;
 }
 
 a, .btn-link {

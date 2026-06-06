@@ -30,7 +30,7 @@ namespace LodgeStay.Services
             if (existing != null) return false;
 
             guest.CreatedAt = DateTime.UtcNow;
-            guest.LoyaltyTier = "Bronze";
+            guest.Tier = "Bronze";
             await _db.InsertGuestAsync(guest);
             return true;
         }

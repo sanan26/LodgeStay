@@ -7,13 +7,7 @@
 @inject RoomService RoomService
 
 <div class="finder-container">
-    <div class="page-header">
-        <button class="btn-back" @onclick="GoBack">← Back</button>
-        <h2>🔍 Smart Room Finder</h2>
-        <DashboardButton />
-    </div>
-
-    <div class="search-bar">
+    <div class="glass-panel search-bar">
         <div class="filter-group">
             <label>Check-in Date</label>
             <input type="date"
@@ -44,7 +38,7 @@
                 <option value="Family">Family</option>
             </select>
         </div>
-        <button class="btn-search" @onclick="SearchRooms">Search</button>
+        <button class="glass-button btn-search" @onclick="SearchRooms">Search</button>
     </div>
 
     @if (!string.IsNullOrEmpty(dateError))
@@ -58,29 +52,60 @@
     }
     else if (rooms.Count > 0)
     {
-        <div class="rooms-grid">
-            @foreach (var room in rooms)
-            {
-                <div class="room-card @GetStatusClass(room.Status)">
+        <div class="carousel-container">
+            <div class="carousel-header">
+                <span class="carousel-info">@rooms.Count rooms available — hover to explore</span>
+                <div class="carousel-controls">
+                    <button class="glass-button btn-arrow" @onclick="PrevPage" disabled="@(currentPage == 0)">←</button>
+                    <button class="glass-button btn-arrow" @onclick="NextPage" disabled="@((currentPage + 1) * pageSize >= rooms.Count)">→</button>
+                </div>
+            </div>
+
+            <div class="rooms-grid">
+                @foreach (var room in PaginatedRooms)
+                {
+                    <div class="glass-panel room-card @GetStatusClass(room.Status)">
+                    <div class="card-accent-band"></div>
                     <div class="room-header">
-                        <span class="room-number">Room @room.RoomNo</span>
+                        <span class="room-number">Room<br/>@room.RoomNo</span>
                         <span class="status-badge">Available</span>
                     </div>
+                    
+                    <h3 class="room-type-title">@room.Room_Type</h3>
+
                     <div class="room-info">
-                        <p>🛏️ @room.Room_Type</p>
-                        <p>👥 Capacity: @room.Capacity</p>
-                        <p>💰 Rs. @room.Price / night</p>
+                        <p class="info-row">👥 <span class="info-text">Capacity: @room.Capacity</span></p>
                         @if (room.IsEcoCertified)
                         {
-                            <p>🌿 Eco Certified</p>
+                            <p class="info-row eco-badge">🌿 <span class="info-text">Eco Certified</span></p>
                         }
+                        
+                        <div class="price-row">
+                            <span class="price-amount">Rs. @room.Price.ToString("N0")</span> <span class="muted-night">/ night</span>
+                        </div>
                     </div>
-                    <button class="btn-book"
+                    
+                    <div class="extra-details">
+                        <div class="detail-item"><span class="detail-label">Floor</span><span class="detail-val">@(room.RoomNo.Length > 0 ? room.RoomNo.Substring(0,1) : "1")</span></div>
+                        <div class="detail-item"><span class="detail-label">Bed</span><span class="detail-val">@(GetMockBedType(room.Room_Type))</span></div>
+                        <div class="detail-item"><span class="detail-label">View</span><span class="detail-val">@(GetMockView(room.RoomNo))</span></div>
+                    </div>
+
+                    <button class="glass-button btn-book"
                             @onclick="() => BookRoom(room)">
                         Book Now
                     </button>
                 </div>
             }
+        </div>
+        
+        <div class="carousel-dots">
+            @for (int i = 0; i < TotalPages; i++)
+            {
+                var pageIndex = i;
+                <span class="dot @(currentPage == pageIndex ? "active" : "")" @onclick="() => GoToPage(pageIndex)"></span>
+            }
+        </div>
         </div>
     }
 </div>
@@ -93,6 +118,12 @@
     private List<Room> rooms = new();
     private bool searched = false;
     private string dateError = "";
+
+    // Pagination / Carousel state
+    private int currentPage = 0;
+    private int pageSize = 3;
+    private int TotalPages => (int)Math.Ceiling((double)rooms.Count / pageSize);
+    private IEnumerable<Room> PaginatedRooms => rooms.Skip(currentPage * pageSize).Take(pageSize);
 
     private List<Room> allRooms = new();
 
@@ -147,6 +178,22 @@
         }
 
         rooms = available;
+        currentPage = 0; // Reset pagination
+    }
+
+    private void PrevPage()
+    {
+        if (currentPage > 0) currentPage--;
+    }
+
+    private void NextPage()
+    {
+        if ((currentPage + 1) * pageSize < rooms.Count) currentPage++;
+    }
+
+    private void GoToPage(int index)
+    {
+        if (index >= 0 && index < TotalPages) currentPage = index;
     }
 
     private async Task GoBack()
@@ -166,194 +213,151 @@
     {
         Navigation.NavigateTo("/new-booking/" + room.Room_ID);
     }
+
+    private string GetMockBedType(string type) => type switch
+    {
+        "Single" => "1 Twin",
+        "Double" => "1 Queen",
+        "Suite" => "1 King",
+        "Family" => "2 Queens",
+        _ => "Standard"
+    };
+
+    private string GetMockView(string roomNo)
+    {
+        var num = int.TryParse(roomNo, out var n) ? n : 0;
+        return num % 2 == 0 ? "Ocean View" : "City Skyline";
+    }
 }
 
 <style>
-    .finder-container {
-        padding: 2rem;
-        max-width: 1100px;
-        margin: 0 auto;
-    }
+    .finder-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    .page-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .btn-back { padding: 8px 16px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
+    .btn-back:hover { background: rgba(255,255,255,0.2); transform: translateY(-1px); }
+    h2 { margin-bottom: 0; }
+    .search-bar { display: flex; flex-wrap: wrap; gap: 1rem; padding: 1.5rem; margin-bottom: 1rem; align-items: flex-end; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 150px; }
+    label { font-size: 0.85rem; font-weight: 600; color: #ccc; text-transform: uppercase; letter-spacing: 0.5px; }
+    input, select { padding: 10px; border-radius: 8px; font-size: 0.95rem; background: rgba(255,255,255,0.05); color: #fff; border: 1px solid rgba(255,255,255,0.1); }
+    input:focus, select:focus { outline: none; border-color: var(--accent-purple); }
+    select option { background: var(--bg-black); color: #fff; }
+    .btn-search { padding: 10px 24px; font-size: 1rem; cursor: pointer; height: 42px; font-weight: 600; }
+    .date-error { background: rgba(230, 81, 0, 0.2); color: #ffb74d; padding: 10px 16px; border-radius: 8px; margin-bottom: 1rem; font-size: 0.9rem; border-left: 4px solid #ffb74d; }
+    
+    .carousel-container { display: flex; flex-direction: column; width: 100%; }
+    .carousel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .carousel-info { color: #64748b; font-size: 0.9rem; }
+    .carousel-controls { display: flex; gap: 0.5rem; }
+    .btn-arrow { padding: 4px 16px; font-size: 1.2rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .btn-arrow:disabled { opacity: 0.3; cursor: not-allowed; }
 
-    .page-header {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
+    .rooms-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; margin-top: 1rem; min-height: 400px; }
+    
+    .carousel-dots { display: flex; justify-content: center; gap: 8px; margin-top: 2rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.2); cursor: pointer; transition: all 0.3s; }
+    .dot.active { background: var(--accent-purple); transform: scale(1.2); box-shadow: 0 0 10px rgba(187, 134, 252, 0.6); }
 
-    .btn-back {
-        padding: 8px 16px;
-        background: #f5f5f5;
-        color: #555;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.95rem;
-        transition: all 0.2s;
-    }
-
-        .btn-back:hover {
-            background: #e0e0e0;
-            transform: translateY(-1px);
-        }
-
-    h2 {
-        color: #2e7d32;
-        margin-bottom: 0;
-    }
-
-    .search-bar {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1rem;
-        background: #f9f9f9;
-        padding: 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        align-items: flex-end;
-    }
-
-    .filter-group {
+    /* Hover Animations */
+    .room-card { 
+        position: relative;
+        padding: 1.5rem; 
+        border-left: 5px solid rgba(255,255,255,0.2); 
+        overflow: hidden; 
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Springy scale */
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        min-width: 150px;
+    }
+    
+    .room-card:hover {
+        transform: scale(1.04) translateY(-5px);
+        box-shadow: 0 10px 30px rgba(187, 134, 252, 0.2), 0 0 15px rgba(187, 134, 252, 0.3) !important;
+        border-color: var(--accent-purple) !important;
+        z-index: 10;
+    }
+    
+    .card-accent-band {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(to right, var(--accent-purple), #3700b3);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .room-card:hover .card-accent-band {
+        opacity: 1;
     }
 
-    label {
-        font-size: 0.85rem;
-        font-weight: 600;
-        color: #555;
+    .room-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+    .room-number { font-weight: 800; font-size: 1.2rem; color: #fff; line-height: 1.1; }
+    
+    .room-type-title {
+        font-size: 1.8rem;
+        margin: 0 0 1rem 0;
+        color: #6366f1; /* Soft slate-indigo */
+        font-weight: 800;
+        opacity: 0.8;
     }
 
-    input, select {
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 0.95rem;
-    }
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; border: 1px solid; }
+    .status-available .status-badge { background: rgba(3, 218, 198, 0.1); color: #03dac6; border-color: rgba(3, 218, 198, 0.3); }
+    .status-reserved .status-badge { background: rgba(187, 134, 252, 0.1); color: var(--accent-purple); border-color: rgba(187, 134, 252, 0.3); }
+    .status-occupied .status-badge { background: rgba(207, 102, 121, 0.1); color: #cf6679; border-color: rgba(207, 102, 121, 0.3); }
+    
+    .room-info p.info-row { margin: 0 0 0.5rem 0; font-size: 0.9rem; color: #94a3b8; display: flex; align-items: center; gap: 0.5rem; }
+    .info-text { color: #cbd5e1; }
+    .eco-badge .info-text { color: #03dac6; font-weight: 500; }
+    
+    .price-row { margin-top: 1.2rem; margin-bottom: 0; display: flex; align-items: baseline; gap: 0.3rem; }
+    .price-amount { font-size: 1.4rem; font-weight: 800; color: #fff; }
+    .muted-night { color: #64748b; font-size: 0.85rem; font-weight: 500; }
 
-        input:focus, select:focus {
-            outline: none;
-            border-color: #2e7d32;
-        }
-
-    .btn-search {
-        padding: 10px 24px;
-        background: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        height: 42px;
-    }
-
-        .btn-search:hover {
-            background: #1b5e20;
-        }
-
-    .date-error {
-        background: #fff3e0;
-        color: #e65100;
-        padding: 10px 16px;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
-        border-left: 4px solid #e65100;
-    }
-
-    .rooms-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        gap: 1.5rem;
-    }
-
-    .room-card {
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border-left: 5px solid #ccc;
-        background: white;
-    }
-
-    .status-available {
-        border-left-color: #2e7d32;
-    }
-
-    .status-reserved {
-        border-left-color: #f9a825;
-    }
-
-    .status-occupied {
-        border-left-color: #c62828;
-    }
-
-    .room-header {
+    /* Hidden Extra Details */
+    .extra-details {
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        margin-top: 0;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1rem;
+        flex-direction: column;
+        gap: 0.4rem;
+        transition: all 0.4s ease;
     }
-
-    .room-number {
+    
+    .room-card:hover .extra-details {
+        max-height: 120px;
+        opacity: 1;
+        margin-top: 1.2rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    .detail-item { display: flex; justify-content: space-between; font-size: 0.85rem; }
+    .detail-label { color: #64748b; font-weight: 500; }
+    .detail-val { color: #f1f5f9; font-weight: 600; }
+    
+    /* Hidden Book Button */
+    .btn-book { 
+        width: 100%; 
+        margin-top: 1.5rem; 
+        padding: 12px; 
+        font-size: 1rem; 
         font-weight: 700;
-        font-size: 1.1rem;
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        visibility: hidden;
+    }
+    
+    .room-card:hover .btn-book {
+        opacity: 1;
+        transform: translateY(0);
+        visibility: visible;
     }
 
-    .status-badge {
-        padding: 4px 10px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-    }
-
-    .status-available .status-badge {
-        background: #e8f5e9;
-        color: #2e7d32;
-    }
-
-    .status-reserved .status-badge {
-        background: #fff8e1;
-        color: #f9a825;
-    }
-
-    .status-occupied .status-badge {
-        background: #ffebee;
-        color: #c62828;
-    }
-
-    .room-info p {
-        margin: 0.3rem 0;
-        color: #555;
-        font-size: 0.95rem;
-    }
-
-    .btn-book {
-        width: 100%;
-        margin-top: 1rem;
-        padding: 10px;
-        background: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.95rem;
-    }
-
-        .btn-book:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .btn-book:hover:not(:disabled) {
-            background: #1b5e20;
-        }
-
-    .no-results {
-        color: #c62828;
-        text-align: center;
-        padding: 2rem;
-    }
+    .btn-book:disabled { opacity: 0.5; cursor: not-allowed; }
+    .no-results { color: #cf6679; text-align: center; padding: 2rem; }
 </style>

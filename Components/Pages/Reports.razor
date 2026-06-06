@@ -6,140 +6,157 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 
-<div class="page-container">
-
-    <div class="page-header">
-        <h2 class="page-title">📄 PDF Reports</h2>
-        <p class="page-sub">Generate and share occupancy, revenue, loyalty, and eco-impact reports.</p>
-    </div>
-
+<div class="analytics-container">
     @if (!isAuthorized)
     {
-        <div class="alert alert-warning">You must be logged in as Manager or Owner to generate reports.</div>
+        <div class="alert-glass warning">
+            <span class="icon">🔒</span>
+            <div class="text">
+                <strong>Access Restricted</strong>
+                <p>You must be logged in as a Manager or Owner to access the analytics generator.</p>
+            </div>
+        </div>
     }
     else
     {
-        <!-- Report Type Selector -->
-        <div class="card">
-            <h3 class="section-title">1. Select Report Type</h3>
-            <div class="report-type-grid">
-                @foreach (var type in reportTypes)
-                {
-                    <button class="report-type-card @(selectedType == type.Key ? "selected" : "")"
-                            @onclick="() => selectedType = type.Key">
-                        <div class="rt-icon">@type.Icon</div>
-                        <div class="rt-name">@type.Name</div>
-                        <div class="rt-desc">@type.Description</div>
-                    </button>
-                }
-            </div>
-        </div>
-
-        <!-- Date Range -->
-        <div class="card">
-            <h3 class="section-title">2. Select Date Range</h3>
-            <div class="date-row">
-                <div class="form-group">
-                    <label>From</label>
-                    <input type="date" class="form-control" @bind="startDate" max="@endDate.ToString("yyyy-MM-dd")" />
+        <div class="wizard-grid">
+            
+            <!-- Step 1: Select Type -->
+            <div class="wizard-col">
+                <div class="step-header">
+                    <div class="step-num">1</div>
+                    <h3 class="step-title">Select Data Set</h3>
                 </div>
-                <div class="date-arrow">→</div>
-                <div class="form-group">
-                    <label>To</label>
-                    <input type="date" class="form-control" @bind="endDate" min="@startDate.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
-                </div>
-            </div>
-
-            <div class="quick-range-btns">
-                <button class="quick-btn" @onclick='() => SetRange(7)'>Last 7 days</button>
-                <button class="quick-btn" @onclick='() => SetRange(30)'>Last 30 days</button>
-                <button class="quick-btn" @onclick='() => SetRange(90)'>Last 90 days</button>
-                <button class="quick-btn" @onclick="SetThisMonth">This Month</button>
-            </div>
-        </div>
-
-        <!-- Generate Button -->
-        <div class="card generate-card">
-            <h3 class="section-title">3. Generate Report</h3>
-
-            <div class="generate-summary">
-                <span class="summary-chip">📋 @(reportTypes.FirstOrDefault(r => r.Key == selectedType)?.Name ?? "—")</span>
-                <span class="summary-chip">📅 @startDate.ToString("dd MMM yyyy") → @endDate.ToString("dd MMM yyyy")</span>
-                <span class="summary-chip">⏱ @((endDate - startDate).Days + 1) days</span>
-            </div>
-
-            <button class="btn btn-generate" @onclick="GenerateReport" disabled="@isGenerating">
-                @if (isGenerating)
-                {
-                    <span class="btn-spinner"></span>
-                    <span>Generating...</span>
-                }
-                else
-                {
-                    <span>📄 Generate Report</span>
-                }
-            </button>
-
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-danger">@errorMessage</div>
-            }
-        </div>
-
-        <!-- Download / Share Result -->
-        @if (pdfReady)
-        {
-            <div class="card result-card">
-                <div class="result-header">
-                    <div class="result-icon">✅</div>
-                    <div>
-                        <div class="result-title">Report Ready</div>
-                        <div class="result-filename">@generatedFileName</div>
-                    </div>
-                </div>
-
-                <div class="share-actions">
-                    <!-- Web: download button using JS interop -->
-                    <button class="btn btn-download" @onclick="DownloadPdf">
-                        ⬇️ Download CSV
-                    </button>
-
-                    <!-- Mobile: share sheet (rendered in MAUI context) -->
-                    @if (isMaui)
+                
+                <div class="type-list">
+                    @foreach (var type in reportTypes)
                     {
-                        <button class="btn btn-share" @onclick="SharePdf">
-                            📤 Share via...
+                        <button class="type-card @(selectedType == type.Key ? "active" : "")"
+                                @onclick="() => selectedType = type.Key">
+                            <div class="t-icon">@type.Icon</div>
+                            <div class="t-info">
+                                <span class="t-name">@type.Name</span>
+                                <span class="t-desc">@type.Description</span>
+                            </div>
+                            <div class="t-radio"></div>
                         </button>
                     }
                 </div>
+            </div>
 
-                <div class="report-meta">
-                    <span>Generated: @DateTime.Now.ToString("dd MMM yyyy, HH:mm")</span>
-                    <span>Size: ~@estimatedSizeKb KB</span>
+            <!-- Step 2: Date Range -->
+            <div class="wizard-col">
+                <div class="step-header">
+                    <div class="step-num">2</div>
+                    <h3 class="step-title">Define Timeline</h3>
+                </div>
+
+                <div class="glass-panel date-panel">
+                    <div class="date-inputs">
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" class="glass-input" @bind="startDate" max="@endDate.ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" class="glass-input" @bind="endDate" min="@startDate.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                        </div>
+                    </div>
+
+                    <div class="quick-ranges">
+                        <label>Quick Select:</label>
+                        <div class="range-pills">
+                            <button class="pill-btn" @onclick='() => SetRange(7)'>7 Days</button>
+                            <button class="pill-btn" @onclick='() => SetRange(30)'>30 Days</button>
+                            <button class="pill-btn" @onclick='() => SetRange(90)'>90 Days</button>
+                            <button class="pill-btn" @onclick="SetThisMonth">This Month</button>
+                        </div>
+                    </div>
                 </div>
             </div>
-        }
 
-        <!-- Report History -->
-        @if (recentReports.Count > 0)
-        {
-            <div class="card">
-                <h3 class="section-title">Recent Reports</h3>
-                <div class="history-list">
-                    @foreach (var report in recentReports)
+            <!-- Step 3: Generate & History -->
+            <div class="wizard-col">
+                <div class="step-header">
+                    <div class="step-num">3</div>
+                    <h3 class="step-title">Generate Report</h3>
+                </div>
+
+                <div class="glass-panel generate-panel">
+                    <div class="gen-summary">
+                        <div class="s-row">
+                            <span>Target:</span>
+                            <strong>@(reportTypes.FirstOrDefault(r => r.Key == selectedType)?.Name ?? "—")</strong>
+                        </div>
+                        <div class="s-row">
+                            <span>Period:</span>
+                            <strong>@startDate.ToString("MMM dd") – @endDate.ToString("MMM dd, yyyy")</strong>
+                        </div>
+                    </div>
+
+                    <button class="btn-generate" @onclick="GenerateReport" disabled="@isGenerating">
+                        @if (isGenerating)
+                        {
+                            <span class="spinner"></span>
+                            <span>Crunching data...</span>
+                        }
+                        else
+                        {
+                            <span class="icon">⚡</span>
+                            <span>Generate CSV Report</span>
+                        }
+                    </button>
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
                     {
-                        <div class="history-row">
-                            <span class="history-icon">@GetTypeIcon(report.Type)</span>
-                            <div class="history-info">
-                                <div class="history-name">@report.FileName</div>
-                                <div class="history-date">@report.GeneratedAt.ToString("dd MMM yyyy, HH:mm")</div>
+                        <div class="toast-error mt-1">@errorMessage</div>
+                    }
+
+                    @if (pdfReady)
+                    {
+                        <div class="result-box">
+                            <div class="r-top">
+                                <span class="r-icon">✅</span>
+                                <div>
+                                    <span class="r-title">Report Ready</span>
+                                    <span class="r-size">~@estimatedSizeKb KB</span>
+                                </div>
                             </div>
-                            <button class="btn btn-sm btn-outline-primary" @onclick="() => RedownloadReport(report)">⬇️</button>
+                            
+                            <div class="r-actions">
+                                <button class="btn-download" @onclick="DownloadPdf">⬇️ Download</button>
+                                @if (isMaui)
+                                {
+                                    <button class="btn-share" @onclick="SharePdf">📤 Share</button>
+                                }
+                            </div>
                         </div>
                     }
                 </div>
+
+                <!-- History -->
+                @if (recentReports.Count > 0)
+                {
+                    <div class="history-panel">
+                        <h4 class="history-title">Recent Exports</h4>
+                        <div class="history-list">
+                            @foreach (var report in recentReports)
+                            {
+                                <div class="h-row">
+                                    <span class="h-icon">@GetTypeIcon(report.Type)</span>
+                                    <div class="h-info">
+                                        <span class="h-name">@report.FileName</span>
+                                        <span class="h-time">@report.GeneratedAt.ToString("HH:mm · dd MMM")</span>
+                                    </div>
+                                    <button class="btn-icon-only" @onclick="() => RedownloadReport(report)">⬇️</button>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
             </div>
-        }
+
+        </div>
     }
 </div>
 
@@ -281,62 +298,106 @@
 }
 
 <style>
-    .page-container { padding: 1rem; max-width: 860px; margin: 0 auto; }
-    .page-header { margin-bottom: 1rem; }
-    .page-title { font-size: 1.5rem; font-weight: 700; color: #1a1a2e; margin: 0; }
-    .page-sub { color: #666; font-size: 0.875rem; margin: 4px 0 0; }
+    .analytics-container { padding: 2rem; max-width: 1300px; margin: 0 auto; color: #e2e8f0; font-family: 'Inter', sans-serif; }
 
-    .card { background: #fff; border-radius: 12px; padding: 1.3rem 1.4rem; box-shadow: 0 2px 10px rgba(0,0,0,0.07); margin-bottom: 1rem; }
-    .section-title { font-size: 1rem; font-weight: 600; color: #1a1a2e; margin-bottom: 1rem; }
+    .page-header { margin-bottom: 3rem; text-align: center; }
+    .page-title { font-size: 2.2rem; font-weight: 800; color: #fff; margin: 0 0 0.5rem 0; letter-spacing: -0.5px; }
+    .page-sub { color: #94a3b8; font-size: 1.05rem; margin: 0; }
 
-    .report-type-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.85rem; }
-    .report-type-card { background: #f8f9fa; border: 2px solid #e0e0e0; border-radius: 12px; padding: 1rem; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .report-type-card:hover { border-color: #2e75b6; background: #f0f4ff; }
-    .report-type-card.selected { border-color: #2e75b6; background: #e8f0fe; box-shadow: 0 0 0 3px rgba(46,117,182,0.15); }
-    .rt-icon { font-size: 1.8rem; margin-bottom: 0.4rem; }
-    .rt-name { font-weight: 600; font-size: 0.9rem; color: #1a1a2e; }
-    .rt-desc { font-size: 0.75rem; color: #777; margin-top: 3px; }
+    .alert-glass { display: flex; align-items: flex-start; gap: 1rem; padding: 1.5rem; border-radius: 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); max-width: 600px; margin: 0 auto; }
+    .alert-glass .icon { font-size: 2rem; }
+    .alert-glass strong { display: block; color: #fcd34d; font-size: 1.1rem; margin-bottom: 0.3rem; }
+    .alert-glass p { margin: 0; color: #fde68a; font-size: 0.95rem; }
 
-    .date-row { display: flex; align-items: flex-end; gap: 1rem; margin-bottom: 0.85rem; flex-wrap: wrap; }
-    .date-arrow { font-size: 1.3rem; color: #aaa; padding-bottom: 0.3rem; }
-    .form-group { display: flex; flex-direction: column; gap: 0.35rem; }
-    .form-group label { font-size: 0.82rem; font-weight: 500; color: #555; }
-    .form-control { border: 1px solid #ddd; border-radius: 8px; padding: 0.5rem 0.75rem; font-size: 0.875rem; }
-    .quick-range-btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-    .quick-btn { background: #f0f4ff; border: 1px solid #c5d5f0; border-radius: 8px; padding: 4px 14px; font-size: 0.8rem; cursor: pointer; color: #2e75b6; font-weight: 500; }
-    .quick-btn:hover { background: #dce8fb; }
+    /* Wizard Grid */
+    .wizard-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2rem; align-items: start; }
+    
+    .wizard-col { display: flex; flex-direction: column; gap: 1.5rem; }
 
-    .generate-card { }
-    .generate-summary { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .summary-chip { background: #f0f4ff; border: 1px solid #c5d5f0; border-radius: 8px; padding: 4px 12px; font-size: 0.8rem; color: #2e75b6; font-weight: 500; }
+    .step-header { display: flex; align-items: center; gap: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem; }
+    .step-num { width: 28px; height: 28px; background: var(--accent-purple); color: #000; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: 800; font-size: 0.9rem; }
+    .step-title { margin: 0; font-size: 1.2rem; font-weight: 600; color: #fff; }
 
-    .btn-generate { width: 100%; padding: 0.85rem; background: #2e75b6; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; }
-    .btn-generate:hover:not(:disabled) { background: #245e99; }
-    .btn-generate:disabled { opacity: 0.65; cursor: not-allowed; }
-    .btn-spinner { width: 18px; height: 18px; border: 3px solid rgba(255,255,255,0.4); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    /* Glass Panels */
+    .glass-panel { background: #13181f; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); padding: 1.8rem; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+
+    /* Type List */
+    .type-list { display: flex; flex-direction: column; gap: 0.8rem; }
+    .type-card { display: flex; align-items: center; gap: 1.2rem; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.2rem; border-radius: 12px; cursor: pointer; text-align: left; transition: all 0.2s; }
+    .type-card:hover { background: rgba(255,255,255,0.04); transform: translateX(5px); }
+    .type-card.active { background: rgba(187, 134, 252, 0.1); border-color: var(--accent-purple); box-shadow: 0 4px 20px rgba(187, 134, 252, 0.15); }
+    
+    .t-icon { font-size: 1.8rem; background: rgba(255,255,255,0.05); width: 48px; height: 48px; border-radius: 12px; display: flex; justify-content: center; align-items: center; }
+    .t-info { flex: 1; display: flex; flex-direction: column; gap: 0.2rem; }
+    .t-name { font-weight: 700; color: #fff; font-size: 1.05rem; }
+    .t-desc { font-size: 0.8rem; color: #94a3b8; }
+    
+    .t-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #64748b; transition: all 0.2s; }
+    .type-card.active .t-radio { border-color: var(--accent-purple); border-width: 6px; }
+
+    /* Date Panel */
+    .date-panel { display: flex; flex-direction: column; gap: 2rem; }
+    .date-inputs { display: flex; flex-direction: column; gap: 1rem; }
+    .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+    .form-group label { font-size: 0.85rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .glass-input { width: 100%; background: #1e2430; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 0.9rem; border-radius: 10px; font-size: 1rem; font-family: inherit; transition: all 0.2s; }
+    .glass-input:focus { outline: none; border-color: var(--accent-purple); box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2); }
+    
+    /* For WebKit (Chrome/Edge) to invert calendar icon in dark mode */
+    ::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; opacity: 0.6; }
+    ::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+    .quick-ranges { display: flex; flex-direction: column; gap: 0.8rem; }
+    .quick-ranges label { font-size: 0.85rem; color: #94a3b8; }
+    .range-pills { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .pill-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #cbd5e1; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+    .pill-btn:hover { background: rgba(187, 134, 252, 0.15); color: var(--accent-purple); border-color: rgba(187, 134, 252, 0.3); }
+
+    /* Generate Panel */
+    .gen-summary { background: rgba(255,255,255,0.02); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.8rem; border: 1px solid rgba(255,255,255,0.05); }
+    .s-row { display: flex; justify-content: space-between; font-size: 0.9rem; }
+    .s-row span { color: #94a3b8; }
+    .s-row strong { color: #fff; }
+
+    .btn-generate { width: 100%; background: linear-gradient(135deg, var(--accent-purple), #9d4edd); color: #fff; border: none; padding: 1.2rem; border-radius: 12px; font-weight: 700; font-size: 1.1rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 0.8rem; transition: all 0.2s; box-shadow: 0 4px 15px rgba(187, 134, 252, 0.3); }
+    .btn-generate:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(187, 134, 252, 0.5); }
+    .btn-generate:disabled { background: rgba(255,255,255,0.1); color: #64748b; box-shadow: none; cursor: not-allowed; }
+    
+    .spinner { width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
     @@keyframes spin { to { transform: rotate(360deg); } }
 
-    .result-card { border-left: 4px solid #28a745; }
-    .result-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
-    .result-icon { font-size: 2.2rem; }
-    .result-title { font-weight: 700; font-size: 1rem; }
-    .result-filename { font-size: 0.78rem; color: #666; font-family: monospace; }
-    .share-actions { display: flex; gap: 0.75rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
-    .btn-download { background: #2e75b6; color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
-    .btn-share    { background: #28a745; color: white; border: none; border-radius: 8px; padding: 0.55rem 1.2rem; font-size: 0.875rem; font-weight: 500; cursor: pointer; }
-    .report-meta  { display: flex; gap: 1.5rem; font-size: 0.78rem; color: #aaa; }
+    .toast-error { padding: 0.8rem; background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; font-size: 0.9rem; text-align: center; }
+    .mt-1 { margin-top: 1rem; }
 
-    .history-list { display: flex; flex-direction: column; gap: 0.6rem; }
-    .history-row  { display: flex; align-items: center; gap: 0.85rem; padding: 0.6rem 0; border-bottom: 1px solid #f0f0f0; }
-    .history-icon { font-size: 1.4rem; }
-    .history-info { flex: 1; }
-    .history-name { font-size: 0.85rem; font-weight: 500; }
-    .history-date { font-size: 0.75rem; color: #aaa; }
+    .result-box { margin-top: 1.5rem; padding: 1.2rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 12px; animation: slideIn 0.3s ease-out; }
+    @@keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .r-top { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .r-icon { font-size: 2rem; }
+    .r-title { display: block; font-weight: 700; color: #10b981; font-size: 1.1rem; }
+    .r-size { color: #059669; font-size: 0.85rem; }
+    
+    .r-actions { display: flex; gap: 0.8rem; }
+    .btn-download { flex: 1; background: #10b981; color: #000; border: none; padding: 0.8rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-download:hover { background: #059669; }
+    .btn-share { flex: 1; background: transparent; border: 1px solid #10b981; color: #10b981; padding: 0.8rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-share:hover { background: rgba(16, 185, 129, 0.1); }
 
-    .btn { padding: 0.5rem 1.1rem; border-radius: 8px; border: none; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
-    .btn-sm { padding: 0.35rem 0.85rem; font-size: 0.8rem; }
-    .btn-outline-primary { background: transparent; border: 1px solid #2e75b6; color: #2e75b6; }
-    .alert { padding: 0.65rem 1rem; border-radius: 8px; margin-top: 0.75rem; font-size: 0.85rem; }
-    .alert-warning { background: #fff3cd; color: #856404; }
-    .alert-danger  { background: #f8d7da; color: #721c24; }
+    /* History Panel */
+    .history-panel { margin-top: 1rem; }
+    .history-title { font-size: 0.95rem; color: #94a3b8; margin: 0 0 1rem 0; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; }
+    .history-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .h-row { display: flex; align-items: center; gap: 1rem; padding: 0.8rem; background: rgba(255,255,255,0.02); border-radius: 10px; transition: background 0.2s; }
+    .h-row:hover { background: rgba(255,255,255,0.05); }
+    .h-icon { font-size: 1.5rem; }
+    .h-info { flex: 1; display: flex; flex-direction: column; }
+    .h-name { font-size: 0.85rem; font-weight: 600; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+    .h-time { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+    .btn-icon-only { background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #fff; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
+    .btn-icon-only:hover { background: rgba(255,255,255,0.1); }
+
+    @@media (max-width: 1024px) {
+        .wizard-grid { grid-template-columns: 1fr; gap: 3rem; }
+        .wizard-col { max-width: 600px; margin: 0 auto; width: 100%; }
+    }
 </style>

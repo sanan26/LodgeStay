@@ -1,49 +1,62 @@
 @page "/guest-profile-detail/{Id:int}"
 @using LodgeStay.Models
 @using LodgeStay.Services
+@using LodgeStay.Components.Layout
 @inject NavigationManager Navigation
 @inject GuestService GuestService
 @inject ReservationService ReservationService
 
 <div class="detail-container">
     <div class="page-header">
-        <button class="btn-back" @onclick="GoBack">← Back</button>
-        <h2>Guest Profile</h2>
+        <div class="header-left">
+            <span class="guest-id">ID: @Id</span>
+        </div>
         @if (!isEditing)
         {
-            <button class="btn-edit" @onclick="ToggleEdit">✏️ Edit</button>
+            <button class="btn-edit" @onclick="ToggleEdit">✏️ Edit Profile</button>
         }
     </div>
 
     @if (guest == null)
     {
-        <p>Loading...</p>
+        <div class="loading-state">Loading guest data...</div>
     }
     else
     {
-        <div class="profile-card">
+        <div class="profile-main-card">
             <div class="profile-header">
-                <div class="avatar">👤</div>
+                <div class="avatar-wrapper">
+                    <div class="avatar">@guest.Name.Substring(0,1).ToUpper()</div>
+                </div>
                 <div class="guest-name">
                     <h3>@guest.Name</h3>
-                    <p>📧 @guest.Email | 📞 @guest.PhoneNo</p>
-                    <p>Member since @guest.CreatedAt.ToString("MMM yyyy")</p>
-                </div>
-                <div class="loyalty-card @GetTierClass(guest.LoyaltyTier)">
-                    <span class="tier-label">@guest.LoyaltyTier</span>
-                    <span class="points-large">⭐ @guest.LoyaltyPoints pts</span>
-                    <div class="progress-bg">
-                        <div class="progress-fill" style="width: @GetProgressPercent(guest.LoyaltyPoints)%"></div>
+                    <div class="guest-contact">
+                        <span>📧 @guest.Email</span>
+                        <span class="dot-sep">·</span>
+                        <span>📞 @guest.PhoneNo</span>
                     </div>
-                    <span class="next-tier">@GetNextTierText(guest.LoyaltyPoints)</span>
+                    <p class="member-since">Member since @guest.CreatedAt.ToString("MMMM yyyy")</p>
+                </div>
+                
+                <div class="loyalty-card @GetTierClass(guest.Tier)">
+                    <div class="tier-info">
+                        <span class="tier-label">@guest.Tier</span>
+                        <span class="points-large">@guest.LoyaltyPoints <small>pts</small></span>
+                    </div>
+                    <div class="tier-progress">
+                        <div class="progress-bg">
+                            <div class="progress-fill" style="width: @GetProgressPercent(guest.LoyaltyPoints)%"></div>
+                        </div>
+                        <span class="next-tier">@GetNextTierText(guest.LoyaltyPoints)</span>
+                    </div>
                 </div>
             </div>
 
             @if (isEditing)
             {
-                <div class="edit-section">
-                    <h4>✏️ Edit Preferences</h4>
-                    <div class="form-row">
+                <div class="edit-section glass-panel">
+                    <h4 class="section-title">✏️ Edit Preferences</h4>
+                    <div class="form-grid">
                         <div class="form-group">
                             <label>Preferred Room Type</label>
                             <select @bind="editRoomType">
@@ -64,24 +77,24 @@
                                 <option value="Single">Single</option>
                             </select>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Floor Preference</label>
-                        <select @bind="editFloor">
-                            <option value="">Any</option>
-                            <option value="Ground">Ground Floor</option>
-                            <option value="1st">1st Floor</option>
-                            <option value="2nd">2nd Floor</option>
-                            <option value="3rd">3rd Floor</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Dietary Notes</label>
-                        <textarea @bind="editDietary" rows="2"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Amenity Notes</label>
-                        <textarea @bind="editAmenity" rows="2"></textarea>
+                        <div class="form-group">
+                            <label>Floor Preference</label>
+                            <select @bind="editFloor">
+                                <option value="">Any</option>
+                                <option value="Ground">Ground Floor</option>
+                                <option value="1st">1st Floor</option>
+                                <option value="2nd">2nd Floor</option>
+                                <option value="3rd">3rd Floor</option>
+                            </select>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Dietary Notes</label>
+                            <textarea @bind="editDietary" rows="2"></textarea>
+                        </div>
+                        <div class="form-group full-width">
+                            <label>Amenity Notes</label>
+                            <textarea @bind="editAmenity" rows="2"></textarea>
+                        </div>
                     </div>
                     <div class="edit-actions">
                         <button class="btn-cancel" @onclick="ToggleEdit">Cancel</button>
@@ -89,54 +102,84 @@
                     </div>
                     @if (!string.IsNullOrEmpty(saveMessage))
                     {
-                        <p class="save-msg">✅ @saveMessage</p>
+                        <div class="save-msg">✅ @saveMessage</div>
                     }
                 </div>
             }
             else
             {
                 <div class="preferences-section">
-                    <h4>💼 Saved Preferences</h4>
+                    <h4 class="section-title">💼 Saved Preferences</h4>
                     <div class="prefs-grid">
-                        <div class="pref-item"><strong>Room Type:</strong> @(string.IsNullOrEmpty(guest.PreferredRoomType) ? "Any" : guest.PreferredRoomType)</div>
-                        <div class="pref-item"><strong>Bed:</strong> @(string.IsNullOrEmpty(guest.PreferredBedType) ? "Any" : guest.PreferredBedType)</div>
-                        <div class="pref-item"><strong>Floor:</strong> @(string.IsNullOrEmpty(guest.PreferredFloor) ? "Any" : guest.PreferredFloor)</div>
-                        <div class="pref-item"><strong>Dietary:</strong> @(string.IsNullOrEmpty(guest.DietaryNotes) ? "None" : guest.DietaryNotes)</div>
-                        <div class="pref-item"><strong>Amenities:</strong> @(string.IsNullOrEmpty(guest.AmenityNotes) ? "None" : guest.AmenityNotes)</div>
+                        <div class="pref-card">
+                            <span class="pref-icon">🛏️</span>
+                            <div class="pref-data">
+                                <span class="pref-label">Room & Bed</span>
+                                <span class="pref-val">@(string.IsNullOrEmpty(guest.PreferredRoomType) ? "Any" : guest.PreferredRoomType) • @(string.IsNullOrEmpty(guest.PreferredBedType) ? "Any Bed" : guest.PreferredBedType)</span>
+                            </div>
+                        </div>
+                        <div class="pref-card">
+                            <span class="pref-icon">🏢</span>
+                            <div class="pref-data">
+                                <span class="pref-label">Floor Pref</span>
+                                <span class="pref-val">@(string.IsNullOrEmpty(guest.PreferredFloor) ? "Any Floor" : guest.PreferredFloor)</span>
+                            </div>
+                        </div>
+                        <div class="pref-card">
+                            <span class="pref-icon">🍽️</span>
+                            <div class="pref-data">
+                                <span class="pref-label">Dietary</span>
+                                <span class="pref-val">@(string.IsNullOrEmpty(guest.DietaryNotes) ? "None specified" : guest.DietaryNotes)</span>
+                            </div>
+                        </div>
                     </div>
+                    @if (!string.IsNullOrEmpty(guest.AmenityNotes))
+                    {
+                        <div class="amenity-notes-box">
+                            <strong>Amenities:</strong> @guest.AmenityNotes
+                        </div>
+                    }
                 </div>
             }
+        </div>
 
-            
-
-            <div class="history-section">
-                <h4>📋 Booking History</h4>
-                @if (bookingHistory.Count == 0)
-                {
-                    <p class="no-history">No previous bookings.</p>
-                }
-                else
-                {
-                    <table class="history-table">
+        <div class="history-section">
+            <h4 class="section-title">📋 Booking History</h4>
+            @if (bookingHistory.Count == 0)
+            {
+                <div class="empty-history">
+                    <span>🏨</span>
+                    <p>No previous bookings for this guest.</p>
+                </div>
+            }
+            else
+            {
+                <div class="table-wrapper">
+                    <table class="dark-table">
                         <thead>
-                            <tr><th>Booking Ref</th><th>Room</th><th>Check-in</th><th>Check-out</th><th>Total</th><th>Status</th></tr>
+                            <tr>
+                                <th>Booking Ref</th>
+                                <th>Room</th>
+                                <th>Dates</th>
+                                <th>Total</th>
+                                <th>Status</th>
+                            </tr>
                         </thead>
                         <tbody>
                             @foreach (var booking in bookingHistory)
                             {
                                 <tr>
-                                    <td>@booking.BookingReference</td>
+                                    <td><span class="mono-ref">@booking.BookingReference</span></td>
                                     <td>Room @booking.Room_ID</td>
-                                    <td>@booking.CheckIn.ToString("dd MMM yyyy")</td>
-                                    <td>@booking.CheckOut.ToString("dd MMM yyyy")</td>
+                                    <td>@booking.CheckIn.ToString("dd MMM") - @booking.CheckOut.ToString("dd MMM yyyy")</td>
                                     <td>Rs. @booking.TotalPrice</td>
-                                    <td><span class="status-@booking.Status.ToLower()">@booking.Status</span></td>
+                                    <td><span class="status-badge status-@booking.Status.ToLower()">@booking.Status</span></td>
                                 </tr>
                             }
                         </tbody>
                     </table>
-                }
-            </div>
+                </div>
+            }
         </div>
     }
 </div>
@@ -170,8 +213,6 @@
         }
     }
 
-    private void GoBack() => Navigation.NavigateTo("/guest-profiles");
-
     private void ToggleEdit()
     {
         isEditing = !isEditing;
@@ -187,10 +228,9 @@
         guest.DietaryNotes = editDietary;
         guest.AmenityNotes = editAmenity;
         await GuestService.UpdateGuestAsync(guest);
-        saveMessage = "Preferences saved!";
+        saveMessage = "Preferences saved successfully!";
         isEditing = false;
     }
-
 
     private string GetTierClass(string tier) => tier switch
     {
@@ -208,59 +248,109 @@
 
     private string GetNextTierText(int points)
     {
-        if (points >= 5000) return "🎉 Max Tier!";
+        if (points >= 5000) return "🎉 Max Tier Reached!";
         if (points >= 1000) return $"{5000 - points} to Gold";
         return $"{1000 - points} to Silver";
     }
 }
 
 <style>
-    .detail-container { padding: 2rem; max-width: 1000px; margin: 0 auto; }
-    .page-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem; }
-    .page-header h2 { flex: 1; margin: 0; color: #2e7d32; }
-    .btn-back { padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #f5f5f5; border: 1px solid #ddd; }
-    .btn-edit { padding: 8px 16px; border-radius: 6px; cursor: pointer; background: #2196f3; color: white; border: none; }
-    .profile-card { background: white; border-radius: 12px; padding: 2rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .profile-header { display: flex; align-items: center; gap: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #eee; margin-bottom: 1.5rem; flex-wrap: wrap; }
-    .avatar { font-size: 4rem; }
+    .detail-container { padding: 2rem; max-width: 1100px; margin: 0 auto; color: #e2e8f0; }
+    
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .header-left { display: flex; align-items: baseline; gap: 1rem; }
+    .header-left h2 { margin: 0; color: #fff; font-size: 1.8rem; }
+    .guest-id { background: rgba(255,255,255,0.1); padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; color: #cbd5e1; font-family: monospace; }
+    
+    .btn-edit { background: rgba(187, 134, 252, 0.15); color: var(--accent-purple); border: 1px solid rgba(187, 134, 252, 0.3); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.2s; font-weight: 600; }
+    .btn-edit:hover { background: rgba(187, 134, 252, 0.25); box-shadow: 0 0 15px rgba(187, 134, 252, 0.2); }
+
+    .loading-state { text-align: center; padding: 3rem; color: #64748b; }
+
+    .profile-main-card { background: #13181f; border-radius: 16px; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 10px 30px rgba(0,0,0,0.5); margin-bottom: 2rem; }
+    
+    .profile-header { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; margin-bottom: 2.5rem; }
+    
+    .avatar-wrapper { position: relative; border-radius: 50%; padding: 4px; background: linear-gradient(135deg, var(--accent-purple), #4ade80); transition: box-shadow 0.3s; }
+    .avatar-wrapper:hover { box-shadow: 0 0 25px rgba(187, 134, 252, 0.5); }
+    .avatar { width: 80px; height: 80px; background: #0d1117; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: #fff; font-weight: 800; }
+    
     .guest-name { flex: 1; }
-    .guest-name h3 { margin: 0; color: #333; font-size: 1.4rem; }
-    .guest-name p { margin: 0.2rem 0; color: #666; font-size: 0.9rem; }
-    .loyalty-card { padding: 1rem; border-radius: 10px; text-align: center; min-width: 150px; color: white; }
-    .tier-gold { background: linear-gradient(135deg, #f9a825, #ffd700); color: #5d4037; }
-    .tier-silver { background: linear-gradient(135deg, #9e9e9e, #e0e0e0); color: #333; }
-    .tier-bronze { background: linear-gradient(135deg, #cd7f32, #e8a87c); }
-    .tier-label { display: block; font-weight: 700; font-size: 1rem; }
-    .points-large { display: block; font-size: 1.3rem; font-weight: bold; margin: 0.25rem 0; }
-    .progress-bg { background: rgba(255,255,255,0.3); border-radius: 4px; height: 6px; margin: 0.25rem 0; }
-    .progress-fill { height: 6px; background: white; border-radius: 4px; }
-    .next-tier { font-size: 0.75rem; opacity: 0.9; }
-    .preferences-section, .edit-section, .history-section, .loyalty-actions { margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #f0f0f0; }
-    h4 { color: #2e7d32; margin-bottom: 1rem; }
-    .prefs-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; background: #f9f9f9; padding: 1rem; border-radius: 8px; }
-    .pref-item { font-size: 0.9rem; color: #555; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .form-group { margin-bottom: 1rem; }
-    label { display: block; font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 4px; }
-    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; }
-    .edit-actions { display: flex; gap: 1rem; margin-top: 1rem; }
-    .btn-cancel { flex: 1; padding: 10px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; cursor: pointer; }
-    .btn-save { flex: 2; padding: 10px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; }
-    .save-msg { color: #2e7d32; font-size: 0.9rem; margin-top: 0.5rem; }
-    .loyalty-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    .earn-box, .redeem-box { background: #f9f9f9; padding: 1rem; border-radius: 8px; }
-    .earn-row { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-    .earn-row input { flex: 1; }
-    .btn-award { padding: 10px 16px; background: #2e7d32; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; }
-    .btn-redeem { padding: 10px 16px; background: #1565c0; color: white; border: none; border-radius: 8px; cursor: pointer; white-space: nowrap; }
-    .btn-redeem:disabled { background: #ccc; cursor: not-allowed; }
-    .loyalty-msg { padding: 10px; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; }
-    .success-message { background: #e8f5e9; color: #2e7d32; }
-    .error-message { background: #ffebee; color: #c62828; }
-    .history-table { width: 100%; border-collapse: collapse; }
-    .history-table th, .history-table td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; font-size: 0.9rem; }
-    .history-table th { background: #f5f5f5; }
-    .status-confirmed { color: #2e7d32; font-weight: 600; }
-    .status-cancelled { color: #c62828; }
-    .no-history { color: #888; text-align: center; padding: 1rem; }
+    .guest-name h3 { margin: 0 0 0.5rem; color: #fff; font-size: 1.8rem; letter-spacing: 0.5px; }
+    .guest-contact { display: flex; align-items: center; gap: 0.75rem; color: #94a3b8; font-size: 0.95rem; margin-bottom: 0.5rem; }
+    .dot-sep { color: #475569; }
+    .member-since { margin: 0; color: #64748b; font-size: 0.85rem; }
+    
+    .loyalty-card { padding: 1.2rem; border-radius: 12px; min-width: 220px; transition: transform 0.3s ease; border: 1px solid rgba(255,255,255,0.1); }
+    .loyalty-card:hover { transform: translateY(-5px); }
+    .tier-gold { background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(217, 119, 6, 0.2)); border-color: rgba(251, 191, 36, 0.3); }
+    .tier-silver { background: linear-gradient(135deg, rgba(148, 163, 184, 0.15), rgba(100, 116, 139, 0.2)); border-color: rgba(148, 163, 184, 0.3); }
+    .tier-bronze { background: linear-gradient(135deg, rgba(217, 119, 6, 0.1), rgba(180, 83, 9, 0.15)); border-color: rgba(217, 119, 6, 0.2); }
+    
+    .tier-info { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 0.8rem; }
+    .tier-label { font-weight: 700; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; color: #fff; }
+    .tier-gold .tier-label { color: #fbbf24; }
+    .tier-silver .tier-label { color: #cbd5e1; }
+    .tier-bronze .tier-label { color: #d97706; }
+    
+    .points-large { font-size: 1.4rem; font-weight: 800; color: #fff; }
+    .points-large small { font-size: 0.8rem; font-weight: 600; color: rgba(255,255,255,0.7); }
+    
+    .tier-progress { display: flex; flex-direction: column; gap: 6px; }
+    .progress-bg { background: rgba(0,0,0,0.3); border-radius: 4px; height: 6px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #fff; border-radius: 4px; transition: width 0.5s ease; }
+    .tier-gold .progress-fill { background: #fbbf24; }
+    .tier-silver .progress-fill { background: #cbd5e1; }
+    .tier-bronze .progress-fill { background: #d97706; }
+    .next-tier { font-size: 0.75rem; color: rgba(255,255,255,0.7); text-align: right; }
+
+    .section-title { color: #fff; font-size: 1.1rem; margin-bottom: 1.5rem; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; }
+
+    /* Edit Section */
+    .edit-section { padding: 1.5rem; background: #0d1117; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full-width { grid-column: 1 / -1; }
+    .form-group label { font-size: 0.85rem; color: #94a3b8; font-weight: 600; }
+    select, textarea { background: #1e2430; border: 1px solid #334155; color: #fff; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
+    select:focus, textarea:focus { outline: none; border-color: var(--accent-purple); box-shadow: 0 0 0 2px rgba(187, 134, 252, 0.2); }
+    .edit-actions { display: flex; gap: 1rem; margin-top: 1.5rem; }
+    .btn-cancel, .btn-save { padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-cancel { background: transparent; color: #cbd5e1; border: 1px solid #334155; flex: 1; }
+    .btn-cancel:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .btn-save { background: rgba(187, 134, 252, 0.15); color: var(--accent-purple); border: 1px solid rgba(187, 134, 252, 0.3); flex: 2; }
+    .btn-save:hover { background: rgba(187, 134, 252, 0.25); }
+    .save-msg { margin-top: 1rem; padding: 10px; background: rgba(16, 185, 129, 0.1); color: #10b981; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.2); }
+
+    /* Preferences */
+    .prefs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.2rem; margin-bottom: 1.5rem; }
+    .pref-card { background: #0d1117; border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; align-items: center; gap: 1rem; }
+    .pref-icon { font-size: 1.5rem; background: rgba(255,255,255,0.05); width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; }
+    .pref-data { display: flex; flex-direction: column; }
+    .pref-label { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; margin-bottom: 2px; }
+    .pref-val { color: #e2e8f0; font-size: 0.95rem; font-weight: 500; }
+    .amenity-notes-box { background: rgba(187, 134, 252, 0.05); border-left: 3px solid var(--accent-purple); padding: 1rem; border-radius: 0 8px 8px 0; color: #cbd5e1; font-size: 0.9rem; }
+    .amenity-notes-box strong { color: var(--accent-purple); }
+
+    /* History */
+    .history-section { background: #13181f; border-radius: 16px; padding: 2rem; border: 1px solid rgba(255,255,255,0.05); }
+    .empty-history { text-align: center; padding: 3rem; color: #64748b; }
+    .empty-history span { font-size: 3rem; opacity: 0.5; margin-bottom: 1rem; display: block; }
+    
+    .table-wrapper { overflow-x: auto; }
+    .dark-table { width: 100%; border-collapse: collapse; }
+    .dark-table th { background: #0d1117; color: #94a3b8; padding: 12px 16px; text-align: left; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    .dark-table td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #cbd5e1; font-size: 0.9rem; }
+    .dark-table tr:hover { background: rgba(255,255,255,0.02); }
+    
+    .mono-ref { font-family: 'Courier New', Courier, monospace; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 6px; color: #94a3b8; }
+    
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-confirmed { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+    .status-cancelled { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+    
+    @@media (max-width: 768px) {
+        .prefs-grid { grid-template-columns: 1fr; }
+        .form-grid { grid-template-columns: 1fr; }
+    }
 </style>

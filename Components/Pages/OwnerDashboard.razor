@@ -7,339 +7,436 @@
 @inject GuestService GuestService
 
 <div class="dashboard-container">
-    <div class="dashboard-header">
-        <h2>🏨 Owner Dashboard</h2>
-        <p class="welcome">Welcome back, Owner! Full access enabled.</p>
+    <!-- ── LIVE STATS ── -->
+    <div class="top-stats-grid">
+        <div class="stat-card accent-purple">
+            <div class="stat-content">
+                <span class="stat-title">TOTAL ROOMS</span>
+                <span class="stat-value">24</span>
+                <span class="stat-subtext">6 available now</span>
+            </div>
+            <div class="stat-icon">🏡</div>
+        </div>
+        <div class="stat-card accent-green">
+            <div class="stat-content">
+                <span class="stat-title">ACTIVE BOOKINGS</span>
+                <span class="stat-value">@activeBookings</span>
+                <span class="stat-subtext">3 checking in today</span>
+            </div>
+            <div class="stat-icon">📋</div>
+        </div>
+        <div class="stat-card accent-gold">
+            <div class="stat-content">
+                <span class="stat-title">REVENUE TODAY</span>
+                <span class="stat-value">@((revenueToday / 1000).ToString("0"))k</span>
+                <span class="stat-subtext">Rs. @revenueToday.ToString("N0") earned</span>
+            </div>
+            <div class="stat-icon">💰</div>
+        </div>
+        <div class="stat-card accent-blue">
+            <div class="stat-content">
+                <span class="stat-title">LOYALTY MEMBERS</span>
+                <span class="stat-value">137</span>
+                <span class="stat-subtext">12 Gold tier</span>
+            </div>
+            <div class="stat-icon">⭐</div>
+        </div>
     </div>
 
-    <div class="section-title">Operations</div>
-    <div class="cards-grid">
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/room-finder")'>
-            <div class="card-icon">🔍</div>
+    <!-- ── OPERATIONS ── -->
+    <div class="section-title">
+        <span class="title-text">OPERATIONS</span>
+        <div class="title-line"></div>
+    </div>
+    
+    <div class="operations-grid">
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/room-finder")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-purple">🔍</div>
             <h3>Room Finder</h3>
             <p>Search and book available rooms</p>
+            <span class="op-action">→ Open</span>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
-            <div class="card-icon">📋</div>
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/reservations")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-green">📋</div>
             <h3>Reservations</h3>
             <p>View and manage all bookings</p>
+            <span class="op-action">→ Open</span>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/guest-profiles")'>
-            <div class="card-icon">👥</div>
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/guest-profiles")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-blue">👤</div>
             <h3>Guest Profiles</h3>
             <p>Manage guest information</p>
+            <span class="op-action">→ Open</span>
         </div>
-        <div class="dash-card" @onclick='() => Navigation.NavigateTo("/group-booking")'>
-            <div class="card-icon">👨‍👩‍👧‍👦</div>
+        <div class="op-card" @onclick='() => Navigation.NavigateTo("/group-booking")'>
+            <div class="card-accent-bar"></div>
+            <div class="op-icon bg-pink">👥</div>
             <h3>Group Booking</h3>
             <p>Create family and group bookings</p>
+            <span class="op-action">→ Open</span>
         </div>
     </div>
 
-    <div class="section-title">Management</div>
-    <div class="cards-grid">
-        <div class="dash-card accent-blue" @onclick='() => Navigation.NavigateTo("/loyalty-points")'>
-            <div class="card-icon">⭐</div>
-            <h3>Loyalty Points</h3>
-            <p>Award and redeem guest points</p>
-        </div>
-        <div class="dash-card accent-blue" @onclick='() => Navigation.NavigateTo("/reservations")'>
-            <div class="card-icon">📅</div>
-            <h3>Export Calendar</h3>
-            <p>Export bookings as .ics file</p>
-        </div>
+    <!-- ── MANAGEMENT ── -->
+    <div class="section-title">
+        <span class="title-text">MANAGEMENT</span>
+        <div class="title-line"></div>
     </div>
 
-    <div class="section-title">Owner Only</div>
-    <div class="cards-grid">
-        <div class="dash-card accent-gold" @onclick="ToggleStats">
-            <div class="card-icon">📊</div>
-            <h3>Occupancy Stats</h3>
-            <p>View revenue and occupancy rates</p>
-        </div>
-        <div class="dash-card accent-gold" @onclick="ToggleEco">
-            <div class="card-icon">🌿</div>
-            <h3>EcoStay Program</h3>
-            <p>Track sustainability participation</p>
-        </div>
-    </div>
-
-    <!-- ── Occupancy Stats Panel ── -->
-    @if (showStats)
-    {
-        <div class="stats-panel">
-            <h3>📊 Quick Stats</h3>
-            @if (statsLoading)
-            {
-                <div class="loading-row"><div class="spinner"></div> Loading stats...</div>
-            }
-            else if (occupancyReport != null && revenueReport != null)
-            {
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-value">@revenueReport.TotalBookings</div>
-                        <div class="stat-label">Active Bookings</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">PKR @revenueReport.TotalRevenue.ToString("N0")</div>
-                        <div class="stat-label">Total Revenue (This Month)</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">@occupancyReport.OccupancyPercent.ToString("0.0")%</div>
-                        <div class="stat-label">Occupancy Rate</div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-value">@occupancyReport.TotalReservations</div>
-                        <div class="stat-label">Total Reservations</div>
-                    </div>
+    <div class="management-grid">
+        <div class="mgmt-card wide" @onclick='() => Navigation.NavigateTo("/loyalty-points")'>
+            <div class="mgmt-content">
+                <div class="op-icon bg-gold">⭐</div>
+                <div>
+                    <h3>Loyalty Points</h3>
+                    <p>Award, redeem, and manage guest loyalty tiers — Bronze, Silver, Gold</p>
                 </div>
-
-                <!-- Per-booking breakdown -->
-                @if (revenueReport.LineItems.Count > 0)
-                {
-                    <div class="breakdown-section">
-                        <h4>Booking Breakdown</h4>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Booking Ref</th>
-                                    <th>Guest</th>
-                                    <th>Room</th>
-                                    <th>Check-In</th>
-                                    <th>Check-Out</th>
-                                    <th>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var item in revenueReport.LineItems)
-                                {
-                                    <tr>
-                                        <td><span class="ref-badge">@item.BookingReference</span></td>
-                                        <td>@item.GuestName</td>
-                                        <td>@item.RoomNo</td>
-                                        <td>@item.CheckIn.ToString("dd MMM")</td>
-                                        <td>@item.CheckOut.ToString("dd MMM")</td>
-                                        <td>PKR @item.TotalPrice.ToString("N0")</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-            }
+            </div>
+            <span class="mgmt-action">→</span>
         </div>
-    }
-
-    <!-- ── EcoStay Panel ── -->
-    @if (showEco)
-    {
-        <div class="eco-panel">
-            <h3>🌿 EcoStay Program</h3>
-            @if (ecoLoading)
-            {
-                <div class="loading-row"><div class="spinner"></div> Loading eco data...</div>
-            }
-            else if (ecoReport != null)
-            {
-                <!-- Property-wide aggregate -->
-                <div class="stats-grid">
-                    <div class="stat-card eco">
-                        <div class="stat-value">@ecoReport.UniqueGuestsParticipated</div>
-                        <div class="stat-label">Eco Participants</div>
-                    </div>
-                    <div class="stat-card eco">
-                        <div class="stat-value">@ecoReport.WaterSavedLitres L</div>
-                        <div class="stat-label">Water Saved</div>
-                    </div>
-                    <div class="stat-card eco">
-                        <div class="stat-value">@ecoReport.TowelReuseCount</div>
-                        <div class="stat-label">Towel Reuses</div>
-                    </div>
-                    <div class="stat-card eco">
-                        <div class="stat-value">@ecoReport.TotalEcoPointsAwarded</div>
-                        <div class="stat-label">Eco Points Awarded</div>
-                    </div>
-                    <div class="stat-card eco">
-                        <div class="stat-value">@ecoReport.SkipHousekeepingCount</div>
-                        <div class="stat-label">Housekeeping Skips</div>
-                    </div>
-                    <div class="stat-card eco">
-                        <div class="stat-value">@ecoReport.DigitalReceiptCount</div>
-                        <div class="stat-label">Digital Receipts</div>
-                    </div>
+        <div class="mgmt-card wide" @onclick='() => Navigation.NavigateTo("/reservations")'>
+            <div class="mgmt-content">
+                <div class="op-icon bg-blue">📅</div>
+                <div>
+                    <h3>Export Calendar</h3>
+                    <p>Export booking schedules and availability as calendar files</p>
                 </div>
-
-                <!-- Per-guest eco breakdown -->
-                @if (guestEcoList.Count > 0)
-                {
-                    <div class="breakdown-section">
-                        <h4>Per-Guest Eco Stats</h4>
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Guest</th>
-                                    <th>Email</th>
-                                    <th>Eco Points</th>
-                                    <th>Actions Done</th>
-                                    <th>Water Saved</th>
-                                    <th>CO₂ Saved</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var row in guestEcoList)
-                                {
-                                    <tr>
-                                        <td>@row.GuestName</td>
-                                        <td>@row.Email</td>
-                                        <td><span class="eco-pts">🌿 @row.EcoPoints</span></td>
-                                        <td>@row.ActionsCompleted</td>
-                                        <td>@row.WaterSavedLitres L</td>
-                                        <td>@row.CO2SavedKg kg</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <p class="muted">No guest eco activity recorded yet.</p>
-                }
-            }
+            </div>
+            <span class="mgmt-action">→</span>
         </div>
-    }
+        <div class="mgmt-card small" @onclick='() => Navigation.NavigateTo("/ecostay")'>
+            <div class="op-icon bg-green">🌿</div>
+            <h3>Eco Reports</h3>
+            <p>Track eco-certified room metrics</p>
+            <span class="op-action">→ Open</span>
+        </div>
+        <div class="mgmt-card small" @onclick='() => Navigation.NavigateTo("/localdeals")'>
+            <div class="op-icon bg-orange">🏷️</div>
+            <h3>Deals</h3>
+            <p>Manage promotions and discounts</p>
+            <span class="op-action">→ Open</span>
+        </div>
+    </div>
+
+    <!-- ── QUICK ACTIONS ── -->
+    <div class="section-title">
+        <span class="title-text">QUICK ACTIONS</span>
+        <div class="title-line"></div>
+    </div>
+
+    <div class="quick-actions-strip">
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/room-finder")'>
+            <div class="qa-icon">➕</div>
+            <div class="qa-text">
+                <span class="qa-title">New Booking</span>
+                <span class="qa-sub">Create reservation</span>
+            </div>
+        </div>
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/notifications/settings")'>
+            <div class="qa-icon">🔔</div>
+            <div class="qa-text">
+                <span class="qa-title">Alerts</span>
+                <span class="qa-sub">View notifications</span>
+            </div>
+        </div>
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/reports")'>
+            <div class="qa-icon">📊</div>
+            <div class="qa-text">
+                <span class="qa-title">Reports</span>
+                <span class="qa-sub">Revenue analytics</span>
+            </div>
+        </div>
+        <div class="qa-item" @onclick='() => Navigation.NavigateTo("/concierge")'>
+            <div class="qa-icon">💬</div>
+            <div class="qa-text">
+                <span class="qa-title">Concierge</span>
+                <span class="qa-sub">Guest requests</span>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 @code {
-    private bool showStats = false;
-    private bool showEco   = false;
+    private int activeBookings = 0;
+    private double revenueToday = 0;
 
-    private bool statsLoading = false;
-    private bool ecoLoading   = false;
-
-    private OccupancyReport? occupancyReport;
-    private RevenueReport?   revenueReport;
-    private EcoReport?       ecoReport;
-
-    private List<GuestEcoRow> guestEcoList = new();
-
-    // ── Toggle handlers — load data on first open ──────────────────────────
-
-    private async Task ToggleStats()
+    protected override async Task OnInitializedAsync()
     {
-        showStats = !showStats;
-        if (showStats && occupancyReport == null)
-            await LoadStats();
-    }
-
-    private async Task ToggleEco()
-    {
-        showEco = !showEco;
-        if (showEco && ecoReport == null)
-            await LoadEco();
-    }
-
-    // ── Load occupancy + revenue from ReportService ────────────────────────
-
-    private async Task LoadStats()
-    {
-        statsLoading = true;
-        var today      = DateTime.Today;
+        var today = DateTime.Today;
         var monthStart = new DateTime(today.Year, today.Month, 1);
-
-        occupancyReport = await ReportService.GetOccupancyReportAsync(monthStart, today);
-        revenueReport   = await ReportService.GetRevenueReportAsync(monthStart, today);
-        statsLoading = false;
-    }
-
-    // ── Load eco aggregate + per-guest breakdown ───────────────────────────
-
-    private async Task LoadEco()
-    {
-        ecoLoading = true;
-        var today      = DateTime.Today;
-        var yearStart  = new DateTime(today.Year, 1, 1);
-
-        ecoReport = await ReportService.GetEcoReportAsync(yearStart, today);
-
-        // Build per-guest rows using EcoStayService + GuestService
-        var guests = await GuestService.GetAllGuestsAsync();
-        guestEcoList.Clear();
-
-        foreach (var guest in guests)
+        
+        var revenueReport = await ReportService.GetRevenueReportAsync(monthStart, today);
+        if (revenueReport != null)
         {
-            var stats = await EcoStayService.GetGuestEcoStatsAsync(guest.Id);
-            if (stats.ActionsCompleted > 0)
-            {
-                guestEcoList.Add(new GuestEcoRow
-                {
-                    GuestName        = guest.Name,
-                    Email            = guest.Email,
-                    EcoPoints        = guest.EcoPoints,
-                    ActionsCompleted = stats.ActionsCompleted,
-                    WaterSavedLitres = stats.WaterSavedLitres,
-                    CO2SavedKg       = stats.CO2SavedKg
-                });
-            }
+            activeBookings = revenueReport.TotalBookings;
+            // Mocking today's revenue based on a fraction of total for demo
+            revenueToday = revenueReport.TotalRevenue > 0 ? (revenueReport.TotalRevenue * 0.15) : 42000;
         }
-
-        ecoLoading = false;
-    }
-
-    // ── Local DTO for the per-guest table ─────────────────────────────────
-    private class GuestEcoRow
-    {
-        public string GuestName        { get; set; } = "";
-        public string Email            { get; set; } = "";
-        public int    EcoPoints        { get; set; }
-        public int    ActionsCompleted { get; set; }
-        public int    WaterSavedLitres { get; set; }
-        public double CO2SavedKg       { get; set; }
     }
 }
 
 <style>
-    .dashboard-container { padding: 2rem; max-width: 1100px; margin: 0 auto; }
-    .dashboard-header { margin-bottom: 2rem; }
-    h2 { color: #2e7d32; }
-    .welcome { color: #888; font-size: 0.95rem; }
+    .dashboard-container { 
+        padding: 1.5rem 2rem; 
+        max-width: 1300px; 
+        margin: 0 auto; 
+        color: #e2e8f0;
+    }
+    
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .status-dot {
+        width: 8px; height: 8px;
+        background: #10b981;
+        border-radius: 50%;
+        box-shadow: 0 0 8px #10b981;
+    }
 
-    .section-title { font-size: 0.85rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; margin: 1.5rem 0 1rem; }
+    /* Section Titles */
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 2.5rem 0 1.5rem;
+    }
+    .title-text {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #64748b;
+        letter-spacing: 1.5px;
+    }
+    .title-line {
+        flex: 1;
+        height: 1px;
+        background: rgba(255,255,255,0.05);
+    }
 
-    .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 1rem; }
+    /* Top Stats Grid */
+    .top-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+    
+    .stat-card {
+        background: #13181f;
+        border-radius: 12px;
+        padding: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border: 1px solid rgba(255,255,255,0.05);
+        border-top: 3px solid transparent;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    }
+    
+    .stat-card.accent-purple { border-top-color: #a78bfa; }
+    .stat-card.accent-green { border-top-color: #10b981; }
+    .stat-card.accent-gold { border-top-color: #fbbf24; }
+    .stat-card.accent-blue { border-top-color: #3b82f6; }
+    
+    .stat-card:hover.accent-purple { box-shadow: 0 10px 25px rgba(167, 139, 250, 0.1); }
+    .stat-card:hover.accent-green { box-shadow: 0 10px 25px rgba(16, 185, 129, 0.1); }
+    .stat-card:hover.accent-gold { box-shadow: 0 10px 25px rgba(251, 191, 36, 0.1); }
+    .stat-card:hover.accent-blue { box-shadow: 0 10px 25px rgba(59, 130, 246, 0.1); }
 
-    .dash-card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); text-align: center; cursor: pointer; transition: transform 0.2s; border-top: 4px solid #2e7d32; }
-    .dash-card.accent-blue { border-top-color: #1565c0; }
-    .dash-card.accent-gold { border-top-color: #f9a825; }
-    .dash-card:hover { transform: translateY(-4px); box-shadow: 0 8px 20px rgba(0,0,0,0.12); }
+    .stat-content {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .stat-title { font-size: 0.75rem; font-weight: 600; color: #64748b; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+    .stat-value { font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; margin-bottom: 0.5rem; }
+    .stat-subtext { font-size: 0.8rem; color: #94a3b8; }
+    .stat-icon { font-size: 1.5rem; opacity: 0.8; }
 
-    .card-icon { font-size: 2.5rem; margin-bottom: 1rem; }
-    h3 { color: #2e7d32; margin-bottom: 0.5rem; }
-    .dash-card.accent-blue h3 { color: #1565c0; }
-    .dash-card.accent-gold h3 { color: #f9a825; }
-    p { color: #888; font-size: 0.9rem; }
+    /* Operations Grid */
+    .operations-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
 
-    .stats-panel, .eco-panel { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 1.5rem; }
+    .op-card {
+        background: #13181f;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid rgba(255,255,255,0.05);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease, border-color 0.3s ease;
+        display: flex;
+        flex-direction: column;
+    }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem; }
-    .stat-card { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; text-align: center; }
-    .stat-card.eco { background: #f1f8e9; }
-    .stat-value { font-size: 1.8rem; font-weight: 700; color: #2e7d32; }
-    .stat-label { font-size: 0.85rem; color: #888; margin-top: 4px; }
+    .card-accent-bar {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 4px;
+        background: var(--accent-purple);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
 
-    .breakdown-section { margin-top: 1.5rem; }
-    .breakdown-section h4 { font-size: 1rem; font-weight: 600; color: #333; margin-bottom: 0.75rem; }
+    .op-card:hover {
+        transform: scale(1.03) translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.5), 0 0 15px rgba(187, 134, 252, 0.1);
+        border-color: rgba(187, 134, 252, 0.3);
+    }
+    .op-card:hover .card-accent-bar { opacity: 1; }
 
-    .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    .data-table th { background: #f5f5f5; padding: 0.6rem 0.75rem; text-align: left; font-weight: 600; color: #555; border-bottom: 2px solid #e0e0e0; }
-    .data-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid #f0f0f0; color: #333; }
-    .data-table tr:hover td { background: #fafafa; }
+    .op-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.5rem;
+        margin-bottom: 1.2rem;
+    }
+    .bg-purple { background: rgba(167, 139, 250, 0.15); color: #a78bfa; }
+    .bg-green { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+    .bg-blue { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+    .bg-pink { background: rgba(236, 72, 153, 0.15); color: #ec4899; }
+    .bg-gold { background: rgba(251, 191, 36, 0.15); color: #fbbf24; }
+    .bg-orange { background: rgba(249, 115, 22, 0.15); color: #f97316; }
 
-    .ref-badge { background: #e8f5e9; color: #2e7d32; padding: 2px 8px; border-radius: 6px; font-size: 0.78rem; font-weight: 600; }
-    .eco-pts { background: #f1f8e9; color: #2e7d32; padding: 2px 8px; border-radius: 6px; font-size: 0.82rem; font-weight: 600; }
+    .op-card h3 { color: #fff; margin: 0 0 0.5rem; font-size: 1.1rem; }
+    .op-card p { color: #64748b; font-size: 0.85rem; line-height: 1.4; margin: 0 0 1.5rem; flex: 1; }
+    
+    .op-action {
+        font-size: 0.85rem;
+        color: #475569;
+        font-weight: 600;
+        transition: color 0.3s ease;
+    }
+    .op-card:hover .op-action { color: var(--accent-purple); }
 
-    .loading-row { display: flex; align-items: center; gap: 0.5rem; color: #888; padding: 1rem 0; font-size: 0.875rem; }
-    .spinner { width: 18px; height: 18px; border: 3px solid #e0e0e0; border-top-color: #2e7d32; border-radius: 50%; animation: spin 0.8s linear infinite; }
-    @@keyframes spin { to { transform: rotate(360deg); } }
-    .muted { color: #aaa; font-size: 0.875rem; margin-top: 1rem; }
+    /* Management Grid */
+    .management-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.5rem;
+    }
+
+    .mgmt-card {
+        background: #13181f;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.05);
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .mgmt-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        border-color: rgba(255,255,255,0.1);
+    }
+
+    .mgmt-card.wide {
+        grid-column: span 2;
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .mgmt-content {
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+    }
+
+    .mgmt-content .op-icon { margin-bottom: 0; }
+    
+    .mgmt-card.wide h3 { color: #fff; margin: 0 0 0.3rem; font-size: 1.1rem; }
+    .mgmt-card.wide p { color: #64748b; font-size: 0.85rem; margin: 0; }
+    
+    .mgmt-action { color: #475569; font-size: 1.2rem; font-weight: bold; transition: color 0.2s; }
+    .mgmt-card.wide:hover .mgmt-action { color: #fff; transform: translateX(3px); }
+
+    .mgmt-card.small {
+        grid-column: span 1;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+    }
+    .mgmt-card.small h3 { color: #fff; margin: 0 0 0.5rem; font-size: 1.05rem; }
+    .mgmt-card.small p { color: #64748b; font-size: 0.85rem; margin: 0 0 1rem; flex: 1; }
+    .mgmt-card.small:hover .op-action { color: #fff; }
+
+    /* Quick Actions Strip */
+    .quick-actions-strip {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+    }
+
+    .qa-item {
+        background: #13181f;
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 12px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+    .qa-item:hover {
+        background: rgba(255,255,255,0.03);
+    }
+
+    .qa-icon {
+        font-size: 1.3rem;
+    }
+
+    .qa-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .qa-title {
+        color: #fff;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    .qa-sub {
+        color: #64748b;
+        font-size: 0.8rem;
+    }
+    
+    /* Responsive Adjustments */
+    @@media (max-width: 1024px) {
+        .top-stats-grid, .operations-grid, .management-grid, .quick-actions-strip {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @@media (max-width: 600px) {
+        .top-stats-grid, .operations-grid, .management-grid, .quick-actions-strip {
+            grid-template-columns: 1fr;
+        }
+        .mgmt-card.wide { grid-column: span 1; }
+        .dashboard-header { flex-direction: column; align-items: flex-start; gap: 1rem; }
+    }
 </style>

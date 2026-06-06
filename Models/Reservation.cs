@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using SQLite;
 
 namespace LodgeStay.Models
@@ -44,5 +44,7 @@ namespace LodgeStay.Models
 
         [NotNull]
         public DateTime Created_at { get; set; } = DateTime.UtcNow;
+
+        public string AttachedDeals { get; set; } = string.Empty;
     }
 }

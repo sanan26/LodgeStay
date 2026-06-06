@@ -7,35 +7,57 @@
 @inject NavigationManager Navigation
 @inject SessionService SessionService
 
-<div class="login-container">
-    <div class="login-card">
-        <div class="logo">🏨</div>
-        <h2>Welcome to LodgeStay</h2>
-        <p class="subtitle">Sign in to continue</p>
-
-        <div class="form-group">
-            <label>Email</label>
-            <input type="text" @bind="email" placeholder="Enter your email" />
+<div class="auth-root">
+    <div class="auth-card glass-panel">
+        <div class="auth-visual">
+            <div class="visual-content">
+                <div class="brand-logotype">🏨 LodgeStay<span>.</span></div>
+                <h1>Welcome Back</h1>
+                <p>Enter your credentials to access the administrative command center.</p>
+            </div>
+            <div class="visual-blob"></div>
         </div>
-        <div class="form-group">
-            <label>Password</label>
-            <input type="password" @bind="password" placeholder="Enter your password" />
+        
+        <div class="auth-form-side">
+            <div class="form-header">
+                <h2>Sign In</h2>
+                <p>Lodge Management System v2.0</p>
+            </div>
+
+            <div class="form-body">
+                <div class="input-group">
+                    <label>Professional Email</label>
+                    <div class="input-wrapper">
+                        <span class="prefix">@@</span>
+                        <input type="email" @bind="email" placeholder="name@lodgestay.com" />
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Security Password</label>
+                    <div class="input-wrapper">
+                        <span class="prefix">🔒</span>
+                        <input type="password" @bind="password" placeholder="••••••••" />
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="auth-msg error">
+                        <span class="icon">⚠️</span> @errorMessage
+                    </div>
+                }
+
+                <button class="btn-auth @(isLoading ? "loading" : "")" @onclick="HandleLogin" disabled="@isLoading">
+                    @if (isLoading) { <div class="spinner"></div> }
+                    else { <span>Unlock Dashboard</span> }
+                </button>
+
+                <div class="auth-footer">
+                    <p>Don't have access? <a href="/register">Request Account</a></p>
+                </div>
+            </div>
         </div>
-
-        @if (!string.IsNullOrEmpty(errorMessage))
-        {
-            <div class="error-box">⚠️ @errorMessage</div>
-        }
-        @if (isLoading)
-        {
-            <p>Logging in...</p>
-        }
-        else
-        {
-            <button class="btn-login" @onclick="HandleLogin">Log In</button>
-        }
-
-        <p class="signup-link">Don't have an account? <a href="/register">Sign Up</a></p>
     </div>
 </div>
 
@@ -49,7 +71,7 @@
     {
         if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(password))
         {
-            errorMessage = "Please enter both email and password.";
+            errorMessage = "Please enter both credentials.";
             return;
         }
 
@@ -58,110 +80,104 @@
 
         try
         {
-            // FIX: Use AuthService.LoginAsync which verifies with BCrypt.
-            // The old code used SHA256 directly which never matched BCrypt hashes.
             var user = await AuthService.LoginAsync(email, password);
 
             if (user == null)
             {
-                errorMessage = "Invalid credentials. Please try again.";
+                errorMessage = "Invalid credentials. Please verify your email and password.";
                 return;
             }
 
             if (!user.IsVerified)
             {
-                errorMessage = "Please verify your account first.";
+                errorMessage = "Account pending verification. Please contact your administrator.";
                 return;
             }
 
             SessionService.Login(user);
 
-            Navigation.NavigateTo(user.Role switch
+            // FIXED REDIRECTION LOGIC
+            string destination = user.Role switch
             {
-                "Manager" => "/dashboard",
-                "Owner"   => "/owner-dashboard",
-                _         => "/"
-            });
+                "Manager" => "/manager-dashboard",
+                "Owner" => "/owner-dashboard",
+                "Staff" => "/staff-dashboard",
+                _ => "/"
+            };
+
+            Navigation.NavigateTo(destination);
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error: {ex.Message}";
+            errorMessage = $"System Error: {ex.Message}";
         }
         finally
         {
             isLoading = false;
         }
     }
-
-    // DEV ONLY: Remove before submission
-    private async Task ClearUsers()
-    {
-        await DbContext.ClearUsersAsync();
-        errorMessage = "";
-        email = "";
-        password = "";
-        StateHasChanged();
-        errorMessage = "✅ Users cleared. Go to Register to create new accounts.";
-    }
 }
 
 <style>
-    .login-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    .auth-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .auth-card { 
+        width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; padding: 0 !important; 
+        border: 1px solid rgba(255,255,255,0.1) !important;
     }
 
-    .login-card {
-        background: white;
-        padding: 2.5rem;
-        border-radius: 16px;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-        width: 100%;
-        max-width: 400px;
-        text-align: center;
+    /* Visual Side */
+    .auth-visual { 
+        background: linear-gradient(135deg, var(--accent-purple), #6b21a8); 
+        padding: 4rem; position: relative; overflow: hidden; 
+        display: flex; flex-direction: column; justify-content: center;
+    }
+    .visual-content { position: relative; z-index: 2; }
+    .brand-logotype { font-size: 1.5rem; font-weight: 900; color: #000; margin-bottom: 2rem; }
+    .brand-logotype span { color: #fff; }
+    .auth-visual h1 { color: #000 !important; font-size: 3rem; font-weight: 900; line-height: 1; margin-bottom: 1rem; }
+    .auth-visual p { color: rgba(0,0,0,0.7); font-size: 1.1rem; line-height: 1.5; }
+    .visual-blob { 
+        position: absolute; top: -10%; right: -10%; width: 300px; height: 300px; 
+        background: rgba(255,255,255,0.1); border-radius: 50%; filter: blur(50px); 
     }
 
-    .logo { font-size: 3rem; margin-bottom: 0.5rem; }
-    h2 { color: #2e7d32; margin-bottom: 0.25rem; }
-    .subtitle { color: #888; margin-bottom: 1.5rem; font-size: 0.9rem; }
+    /* Form Side */
+    .auth-form-side { padding: 4rem; background: #13181f; }
+    .form-header { margin-bottom: 3rem; }
+    .form-header h2 { font-size: 2rem; font-weight: 800; color: #fff !important; margin: 0; }
+    .form-header p { color: #64748b; font-size: 0.9rem; margin: 0.5rem 0 0 0; }
 
-    .form-group { text-align: left; margin-bottom: 1rem; }
-    label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 4px; font-weight: 600; }
-    input {
-        width: 100%;
-        padding: 10px 12px;
-        border: 1px solid #ddd;
-        border-radius: 8px;
-        font-size: 1rem;
-        box-sizing: border-box;
+    .input-group { margin-bottom: 1.5rem; }
+    .input-group label { display: block; font-size: 0.75rem; font-weight: 800; color: #475569 !important; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.6rem; }
+    .input-wrapper { position: relative; display: flex; align-items: center; }
+    .prefix { position: absolute; left: 1rem; color: #475569; font-weight: bold; }
+    .input-wrapper input { 
+        width: 100%; padding: 1rem 1rem 1rem 2.8rem; background: rgba(255,255,255,0.03); 
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; font-size: 1rem; transition: all 0.2s; 
     }
-    input:focus { outline: none; border-color: #2e7d32; }
+    .input-wrapper input:focus { outline: none; border-color: var(--accent-purple); background: rgba(187, 134, 252, 0.05); }
 
-    .btn-login {
-        width: 100%;
-        padding: 12px;
-        background-color: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        margin-top: 0.5rem;
+    .auth-msg { padding: 1rem; border-radius: 12px; margin-bottom: 2rem; font-size: 0.9rem; font-weight: 600; display: flex; gap: 0.8rem; }
+    .error { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444; }
+
+    .btn-auth { 
+        width: 100%; padding: 1.2rem; background: var(--accent-purple); color: #000; 
+        border: none; border-radius: 12px; font-weight: 800; font-size: 1rem; cursor: pointer; transition: all 0.3s; 
     }
-    .btn-login:hover { background-color: #1b5e20; }
+    .btn-auth:hover { transform: scale(1.02); box-shadow: 0 0 30px rgba(187, 134, 252, 0.4); }
+    .btn-auth.loading { opacity: 0.7; cursor: wait; }
 
-    .error-box {
-        background: #ffebee;
-        color: #c62828;
-        padding: 10px;
-        border-radius: 8px;
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
+    .auth-footer { margin-top: 2rem; text-align: center; }
+    .auth-footer p { color: #64748b; font-size: 0.9rem; }
+    .auth-footer a { color: var(--accent-purple); font-weight: 700; text-decoration: none; }
+    .auth-footer a:hover { text-decoration: underline; }
+
+    .spinner { width: 20px; height: 20px; border: 3px solid rgba(0,0,0,0.1); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    @@media (max-width: 800px) {
+        .auth-card { grid-template-columns: 1fr; }
+        .auth-visual { display: none; }
+        .auth-form-side { padding: 2.5rem; }
     }
-
-    .signup-link { margin-top: 1.5rem; font-size: 0.9rem; color: #555; }
-    .signup-link a { color: #2e7d32; font-weight: 600; text-decoration: none; }
 </style>

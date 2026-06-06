@@ -1,141 +1,150 @@
-﻿@page "/"
+@page "/"
 @inject NavigationManager Navigation
 
-<div class="home">
-    <div class="hero">
-        <h1>🏨 LodgeStay</h1>
-        <h2>Smart Lodge Management</h2>
-        <p>Manage reservations, track rooms, and delight your guests</p>
-        <div class="buttons">
-            <button class="btn" @onclick="GoToLogin">Login</button>
-            <button class="btn btn-outline" @onclick="GoToRegister">Register</button>
-        </div>
-    </div>
+<div class="home-root">
+    <div class="landing-container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content">
+                <div class="brand-badge">THE FUTURE OF HOSPITALITY</div>
+                <h1 class="brand-title">LodgeStay<span>.</span></h1>
+                <h2 class="hero-subtitle">Smart Management. <span>Seamless Operations.</span></h2>
+                <p class="hero-desc">The all-in-one dark-mode command center for modern lodge owners. Elevate your guest experience with intelligent automation and real-time analytics.</p>
+                
+                <div class="hero-actions">
+                    <button class="btn-main btn-glow" @onclick="GoToLogin">Launch Dashboard</button>
+                    <button class="btn-main btn-outline" @onclick="GoToRegister">Create Account</button>
+                </div>
+            </div>
 
-    <div class="features">
-        <div class="feature">
-            <span class="emoji">🔍</span>
-            <h3>Smart Room Finder</h3>
-            <p>Find available rooms instantly</p>
+            <div class="hero-visual">
+                <div class="glass-orb">
+                    <div class="orb-inner"></div>
+                </div>
+                <div class="float-stats">
+                    <div class="stat-bubble b1">98% OCCUPANCY</div>
+                    <div class="stat-bubble b2">5.0 RATING</div>
+                    <div class="stat-bubble b3">ECO CERTIFIED</div>
+                </div>
+            </div>
         </div>
-        <div class="feature">
-            <span class="emoji">📋</span>
-            <h3>Easy Bookings</h3>
-            <p>Create and manage reservations</p>
-        </div>
-        <div class="feature">
-            <span class="emoji">📊</span>
-            <h3>Live Dashboard</h3>
-            <p>Track occupancy in real-time</p>
-        </div>
-        <div class="feature">
-            <span class="emoji">🌿</span>
-            <h3>Eco Rewards</h3>
-            <p>Earn points for green choices</p>
-        </div>
-    </div>
 
-    <footer>
-        <p>© 2024 LodgeStay</p>
-    </footer>
+        <!-- Features Grid -->
+        <div class="features-section">
+            <div class="section-tag">CAPABILITIES</div>
+            <h2 class="section-title">Scale Operations</h2>
+            
+            <div class="features-grid">
+                <div class="glass-panel feature-card">
+                    <div class="f-tag">FIND</div>
+                    <h3>Room Finder</h3>
+                    <p>Proprietary algorithms that match guests to the perfect available room in milliseconds.</p>
+                </div>
+                <div class="glass-panel feature-card">
+                    <div class="f-tag">BOOK</div>
+                    <h3>Reservation Engine</h3>
+                    <p>Manage high-volume bookings with a high-performance, dark-mode administrative interface.</p>
+                </div>
+                <div class="glass-panel feature-card">
+                    <div class="f-tag">DATA</div>
+                    <h3>Analytics Hub</h3>
+                    <p>Real-time occupancy tracking, revenue forecasting, and automated PDF reporting.</p>
+                </div>
+                <div class="glass-panel feature-card">
+                    <div class="f-tag">ECO</div>
+                    <h3>EcoStay Framework</h3>
+                    <p>Incentivize sustainable guest behavior with integrated loyalty rewards and green tracking.</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <div class="footer-divider"></div>
+            <div class="footer-content">
+                <span>© 2024 LodgeStay Premium</span>
+                <div class="footer-links">
+                    <a href="#">Support</a>
+                    <a href="#">API Docs</a>
+                    <a href="#">Security</a>
+                </div>
+            </div>
+        </footer>
+    </div>
 </div>
 
 @code {
-    private void GoToLogin()
-    {
-        Navigation.NavigateTo("/login");
-    }
-
-    private void GoToRegister()
-    {
-        Navigation.NavigateTo("/register");
-    }
+    private void GoToLogin() => Navigation.NavigateTo("/login");
+    private void GoToRegister() => Navigation.NavigateTo("/register");
 }
 
 <style>
-    .home {
-        text-align: center;
-        padding: 2rem;
+    .home-root { 
+        min-height: 100vh; 
+        color: #e2e8f0; 
+        font-family: 'Inter', sans-serif; 
+        position: relative; 
+        overflow-x: hidden; 
     }
 
-    .hero {
-        padding: 3rem 1rem;
-    }
+    .landing-container { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
 
-    h1 {
-        font-size: 3rem;
-        margin: 0;
-        color: #2e7d32;
-    }
+    /* Hero */
+    .hero-section { display: flex; align-items: center; justify-content: space-between; padding: 8rem 0; gap: 4rem; min-height: 80vh; }
+    .hero-content { flex: 1.2; }
+    
+    .brand-badge { display: inline-block; padding: 6px 16px; background: rgba(187, 134, 252, 0.1); border: 1px solid rgba(187, 134, 252, 0.2); border-radius: 50px; font-size: 0.75rem; font-weight: 800; color: var(--accent-purple); letter-spacing: 2px; margin-bottom: 2rem; }
+    .brand-title { font-size: 5rem; font-weight: 900; color: #fff; margin: 0; line-height: 0.9; }
+    .brand-title span { color: var(--accent-purple); }
+    
+    .hero-subtitle { font-size: 2.2rem; font-weight: 700; color: #fff; margin: 1.5rem 0; }
+    .hero-subtitle span { color: #94a3b8; }
+    
+    .hero-desc { font-size: 1.2rem; color: #94a3b8; line-height: 1.6; max-width: 550px; margin-bottom: 3rem; }
 
-    h2 {
-        color: #555;
-        margin: 0.5rem 0;
-    }
+    .hero-actions { display: flex; gap: 1.5rem; }
+    .btn-main { padding: 1.2rem 2.5rem; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; transition: all 0.3s ease; }
+    .btn-glow { background: var(--accent-purple); color: #000; border: none; box-shadow: 0 10px 30px rgba(187, 134, 252, 0.3); }
+    .btn-glow:hover { transform: translateY(-5px); background: #9d4edd; box-shadow: 0 15px 40px rgba(187, 134, 252, 0.5); }
+    .btn-outline { background: transparent; border: 2px solid rgba(255,255,255,0.1); color: #fff; }
+    .btn-outline:hover { background: rgba(255,255,255,0.05); border-color: #fff; }
 
-    p {
-        color: #666;
-        font-size: 1.1rem;
-    }
+    /* Visual */
+    .hero-visual { flex: 0.8; position: relative; display: flex; justify-content: center; }
+    .glass-orb { width: 300px; height: 300px; border-radius: 50%; background: linear-gradient(135deg, rgba(187, 134, 252, 0.2), rgba(3, 218, 198, 0.2)); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(20px); position: relative; display: flex; justify-content: center; align-items: center; animation: float 6s ease-in-out infinite; }
+    .orb-inner { width: 80%; height: 80%; border-radius: 50%; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 70%); }
+    
+    .float-stats { position: absolute; inset: 0; }
+    .stat-bubble { position: absolute; background: rgba(13, 17, 23, 0.8); border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 12px 20px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; white-space: nowrap; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .b1 { top: -20px; left: -40px; animation: float 5s ease-in-out infinite 0.5s; }
+    .b2 { bottom: 20px; right: -40px; animation: float 7s ease-in-out infinite 1s; }
+    .b3 { bottom: 60%; left: -80px; animation: float 6s ease-in-out infinite 1.5s; }
 
-    .buttons {
-        margin-top: 2rem;
-    }
+    @@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
 
-    .btn {
-        padding: 10px 24px;
-        margin: 0 8px;
-        background: #2e7d32;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 1rem;
-    }
+    /* Features */
+    .features-section { padding: 6rem 0; text-align: center; }
+    .section-tag { font-size: 0.75rem; font-weight: 800; color: #03dac6; letter-spacing: 3px; margin-bottom: 1rem; }
+    .section-title { font-size: 2.8rem; font-weight: 800; color: #fff; margin-bottom: 4rem; }
+    
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+    .feature-card { padding: 3rem 2rem; text-align: left; transition: all 0.3s ease; position: relative; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+    .feature-card:hover { transform: translateY(-10px); border-color: var(--accent-purple); background: rgba(168, 85, 247, 0.05); }
+    .f-tag { font-size: 0.7rem; font-weight: 900; color: var(--accent-purple); letter-spacing: 2px; margin-bottom: 1.5rem; background: rgba(168, 85, 247, 0.1); display: inline-block; padding: 4px 10px; border-radius: 4px; }
+    .feature-card h3 { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 1rem; text-transform: uppercase; }
+    .feature-card p { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin: 0; }
 
-    .btn-outline {
-        background: white;
-        color: #2e7d32;
-        border: 2px solid #2e7d32;
-    }
+    /* Footer */
+    footer { padding: 4rem 0; margin-top: 4rem; }
+    .footer-divider { height: 1px; background: linear-gradient(to right, transparent, rgba(255,255,255,0.1), transparent); margin-bottom: 2rem; }
+    .footer-content { display: flex; justify-content: space-between; align-items: center; color: #64748b; font-size: 0.9rem; }
+    .footer-links { display: flex; gap: 2rem; }
+    .footer-links a { color: #64748b; text-decoration: none; transition: color 0.2s; }
+    .footer-links a:hover { color: #fff; }
 
-    .btn:hover {
-        transform: translateY(-2px);
-    }
-
-    .features {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 2rem;
-        padding: 2rem;
-        max-width: 1000px;
-        margin: 0 auto;
-    }
-
-    .feature {
-        padding: 1.5rem;
-        background: #f5f5f5;
-        border-radius: 12px;
-    }
-
-    .emoji {
-        font-size: 2.5rem;
-        display: block;
-    }
-
-    .feature h3 {
-        color: #2e7d32;
-        margin: 0.5rem 0;
-    }
-
-    .feature p {
-        font-size: 0.9rem;
-        margin: 0;
-    }
-
-    footer {
-        margin-top: 3rem;
-        padding: 1rem;
-        color: #888;
+    @@media (max-width: 900px) {
+        .hero-section { flex-direction: column; text-align: center; padding-top: 4rem; }
+        .hero-desc { margin: 1.5rem auto 3rem auto; }
+        .hero-actions { justify-content: center; }
+        .brand-title { font-size: 4rem; }
     }
 </style>
